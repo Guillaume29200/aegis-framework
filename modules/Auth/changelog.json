@@ -1,0 +1,16 @@
+{
+  "1.0.0": {
+    "date": "2025-11-05",
+    "changes": [
+      "Initial release",
+      "Login & Register with CSRF protection",
+      "Remember Me functionality",
+      "Admin dashboard with statistics",
+      "Member dashboard with profile",
+      "Role-based redirection",
+      "Session management",
+      "Login attempts tracking",
+      "User sessions tracking"
+    ]
+  }
+}
