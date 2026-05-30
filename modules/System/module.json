@@ -1,0 +1,10 @@
+{
+    "name": "System",
+    "version": "1.0.0",
+    "description": "Fonctionnalités système : gestion des modules, centre de sécurité, monitoring",
+    "author": "Lavelia Studio",
+    "class": "System\\System",
+    "core": true,
+    "dependencies": [],
+    "menu": []
+}
