@@ -1,0 +1,20 @@
+{
+    "versions": [
+        {
+            "version": "1.0.0",
+            "date": "2025-12-03",
+            "changes": [
+                "✨ Création du module Configuration",
+                "⚙️ Gestion des paramètres Général (site_name, description, webmaster, version)",
+                "🔧 Gestion Système (debug_mode, cache, maintenance)",
+                "🔒 Gestion Sécurité (registration, cookies RGPD, reCAPTCHA v3)",
+                "💬 Gestion Commentaires Blog (activation, modération, anonymes)",
+                "🌐 Gestion SEO (template meta, description, keywords)",
+                "🤖 Structure IA prête (OpenAI, Claude, Mistral)",
+                "✅ Interface moderne avec onglets",
+                "🚀 Sauvegarde AJAX par section",
+                "🔐 CSRF Protection intégré"
+            ]
+        }
+    ]
+}

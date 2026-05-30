@@ -1,0 +1,27 @@
+{
+    "name": "Configuration",
+    "version": "1.0.0",
+    "description": "Module de configuration globale du CMS - Système, Sécurité, SEO, IA",
+    "author": "Lavelia Studio",
+    "class": "Configuration\\Configuration",
+    "core": true,
+    "dependencies": [],
+    "routes": true,
+    "menu": [
+        {
+            "label": "Configuration",
+            "icon": "⚙️",
+            "position": 100,
+            "match": "/admin/configuration",
+            "children": [
+                { "label": "Paramètres généraux", "icon": "🔧", "url": "/admin/configuration" },
+                { "label": "SEO & médias", "icon": "🔍", "url": "/admin/configuration/seo" },
+                { "label": "RGPD / Cookies", "icon": "🍪", "url": "/admin/configuration/rgpd" },
+                { "label": "Modèles IA", "icon": "🤖", "url": "/admin/configuration/ai-models" },
+                { "label": "Modules", "icon": "🧩", "url": "/admin/modules" },
+                { "label": "Centre de sécurité", "icon": "🛡️", "url": "/admin/security" },
+                { "label": "Monitoring", "icon": "📡", "url": "/admin/monitoring" }
+            ]
+        }
+    ]
+}
