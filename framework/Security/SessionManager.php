@@ -106,7 +106,9 @@ class SessionManager
         if (!isset($_SESSION['_fingerprint'])) {
             $_SESSION['_fingerprint'] = $fingerprint;
         } elseif ($_SESSION['_fingerprint'] !== $fingerprint) {
-            // Session hijacking détecté !
+            // Session hijacking détecté ! Le Centre de sécurité (créé après le
+            // démarrage de session) relèvera ce drapeau dans son middleware.
+            $GLOBALS['_aegis_session_hijack'] = true;
             $this->handleSessionExpired('Session validation failed: possible hijacking attempt');
             return;
         }

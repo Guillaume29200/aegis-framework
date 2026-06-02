@@ -245,7 +245,7 @@ class GeolocService
             CURLOPT_CONNECTTIMEOUT => 3,
             CURLOPT_FOLLOWLOCATION => true,
             CURLOPT_MAXREDIRS      => 2,
-            CURLOPT_USERAGENT      => 'eSport-CMS/4.0 GeolocService',
+            CURLOPT_USERAGENT      => 'Aegis Framework/4.0 GeolocService',
             CURLOPT_SSL_VERIFYPEER => false, // PHP 8.5 + certains VPS ont des soucis SSL
             CURLOPT_SSL_VERIFYHOST => 0,
         ]);

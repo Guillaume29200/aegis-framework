@@ -114,6 +114,7 @@ class AdminMenuService
             'position' => (int) ($item['position'] ?? 500),
             'match'    => (string) ($item['match'] ?? $url ?? ''),
             'badge'    => $item['badge'] ?? null,
+            'mega'     => !empty($item['mega']),
             'children' => $children,
         ];
     }

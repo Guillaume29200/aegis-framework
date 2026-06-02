@@ -66,7 +66,7 @@ class SecurityFirewall
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Protection GSH - {$title}</title>
+    <title>Aegis Framework — {$title}</title>
     <style>
         body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#111827;color:#e5e7eb;font-family:Arial,sans-serif}
         .box{width:min(520px,92vw);background:#1f2937;border:1px solid #374151;border-radius:12px;padding:32px;text-align:center}

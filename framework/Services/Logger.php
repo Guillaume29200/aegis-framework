@@ -202,23 +202,6 @@ class Logger
         $this->log(self::SECURITY, $message, $context);
     }
 
-    public function logActivity(int $userId, string $action, array $details = []): void
-    {
-        $data = [
-            'user_id' => $userId,
-            'action' => $action,
-            'details' => json_encode($details, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-            'ip_address' => $this->clientIp(),
-            'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? null,
-        ];
-
-        try {
-            $this->db->insert('user_activities', $data);
-        } catch (\Throwable $e) {
-            $this->error('Failed to log activity: ' . $e->getMessage());
-        }
-    }
-
     public function getRecentLogs(int $limit = 100, ?string $level = null): array
     {
         $limit = max(1, min(500, $limit));

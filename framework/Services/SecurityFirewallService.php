@@ -15,11 +15,30 @@ class SecurityFirewallService
     private Database $db;
     private array $config;
     private bool $tablesReady = false;
+    /** @var ?\Closure(string $ip, string $ruleKey, string $reason):void Pont vers le scoring du Centre de sécurité. */
+    private ?\Closure $detectionSink = null;
 
     public function __construct(Database $db, array $securityConfig)
     {
         $this->db = $db;
         $this->config = $securityConfig['firewall'] ?? [];
+    }
+
+    /** Branche un récepteur de détections (ex. SecurityCenterService::recordEvent). */
+    public function setDetectionSink(\Closure $sink): void
+    {
+        $this->detectionSink = $sink;
+    }
+
+    private function emitDetection(string $ip, string $ruleKey, string $reason): void
+    {
+        if ($this->detectionSink !== null) {
+            try {
+                ($this->detectionSink)($ip, $ruleKey, $reason);
+            } catch (\Throwable $e) {
+                error_log('[SecurityFirewall] detection sink error: ' . $e->getMessage());
+            }
+        }
     }
 
     public function isEnabled(): bool
@@ -189,6 +208,9 @@ class SecurityFirewallService
         if ($rate['hits'] > $rate['limit']) {
             $reason = sprintf('Trop de requetes sur %s : %d/%d en %ds', $routeKey, $rate['hits'], $rate['limit'], $rate['window']);
             $this->logEvent($ip, 'rate_limit_exceeded', 'medium', $reason);
+            // Pont vers le score du Centre de sécurité : flood marqué si large dépassement.
+            $rule = $rate['hits'] > $rate['limit'] * 3 ? 'request_flood' : 'rate_limit_exceeded';
+            $this->emitDetection($ip, $rule, $reason);
             $this->blockIp($ip, $reason, (int)($this->config['rate_block_seconds'] ?? 900));
             return ['allowed' => false, 'status' => 429, 'reason' => $reason];
         }
