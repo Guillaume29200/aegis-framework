@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /**
- * eSport-CMS V4 - Configuration Sécurité
+ * Aegis Framework V4 - Configuration Sécurité
  *
  * - CSRF Protection
  * - XSS Filtering
@@ -17,7 +17,7 @@ return [
     // SESSIONS SÉCURISÉES
     // ============================================
     'session' => [
-        'name' => 'ESPORTCMS_SESSION',
+        'name' => 'AEGIS_FRAMEWORK_SESSION',
         'lifetime' => 0,                      // Expire à fermeture navigateur
         'path' => '/',
         'domain' => '',                       // Laisser vide pour auto-detect
@@ -44,6 +44,7 @@ return [
         'except' => [
             '/api/webhook/*',
             '/api/public/*',
+            '/api/odin/metrics',   // ingestion agent O.D.I.N — authentifiée par clé API (X-ODIN-KEY)
         ],
     ],
 

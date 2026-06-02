@@ -1,5 +1,5 @@
 /* ==========================================================================
-   eSport-CMS V4 — Admin UI (sans dépendance externe)
+   Aegis Framework V4 — Admin UI (sans dépendance externe)
    Design system + shell (sidebar / topbar) + panneau de contrôle
    --------------------------------------------------------------------------
    Theming : [data-theme="light|dark"] sur <html>
@@ -290,19 +290,65 @@ html[data-layout="topbar"] [data-action="sidebar-toggle"] { display: none; }
     opacity: 0; visibility: hidden; transform: translateY(-8px);
     transition: var(--t-fast); z-index: 60;
 }
-/* Mega-menu large dès qu'il y a beaucoup d'entrées */
-.adm-topnav .adm-topnav-sub.mega { grid-template-columns: repeat(3, minmax(180px, 1fr)); min-width: 580px; max-width: 92vw; }
-.adm-topnav .adm-topnav-item:last-child .adm-topnav-sub.mega,
-.adm-topnav .adm-topnav-item:nth-last-child(2) .adm-topnav-sub.mega { left: auto; right: 0; }
-@media (max-width: 700px) { .adm-topnav .adm-topnav-sub.mega { grid-template-columns: 1fr 1fr; min-width: 300px; } }
+/* Mega-menu : panneau pleine largeur ancré sous le header (mode topbar).
+   L'item porteur passe en position:static pour que le panneau absolu s'ancre
+   au header (sticky = positionné). top:100% = bas réel du header quelle que
+   soit sa hauteur (bannière /install, nav sur 2 lignes…). */
+html[data-layout="topbar"] .adm-topnav .adm-topnav-item:has(> .adm-topnav-sub.mega) { position: static; }
+html[data-layout="topbar"] .adm-topnav .adm-topnav-sub.mega {
+    position: absolute;
+    top: 100%;
+    left: 0; right: 0;
+    width: auto; min-width: 0; max-width: none;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px 8px;
+    padding: 18px clamp(16px, 4vw, 48px);
+    border-left: none; border-right: none;
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+@media (max-width: 900px) { html[data-layout="topbar"] .adm-topnav .adm-topnav-sub.mega { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 640px) { html[data-layout="topbar"] .adm-topnav .adm-topnav-sub.mega { grid-template-columns: 1fr 1fr; } }
+/* Repli à droite pour les sous-menus simples proches du bord (non-mega). */
+.adm-topnav .adm-topnav-item:last-child .adm-topnav-sub:not(.mega),
+.adm-topnav .adm-topnav-item:nth-last-child(2) .adm-topnav-sub:not(.mega) { left: auto; right: 0; }
 /* Ouverture au survol ET au clic (classe .open posée par JS, fiable au tactile) */
 .adm-topnav .adm-topnav-item:hover > .adm-topnav-sub,
 .adm-topnav .adm-topnav-item.open > .adm-topnav-sub { opacity: 1; visibility: visible; transform: translateY(0); }
+/* Après clic sur un lien : on force la fermeture même si la souris reste dessus */
+.adm-topnav .adm-topnav-item.closing > .adm-topnav-sub { opacity: 0 !important; visibility: hidden !important; transform: translateY(-8px) !important; }
 .adm-topnav .adm-topnav-sub a {
     display: flex; gap: 10px; align-items: center;
     padding: 10px 12px; border-radius: 8px; color: var(--text-soft); font-weight: 500;
 }
 .adm-topnav .adm-topnav-sub a:hover { background: var(--surface-3); color: var(--text); }
+
+/* Mega-menu en sections (sous-groupes) : chaque colonne = une section. */
+html[data-layout="topbar"] .adm-topnav .adm-topnav-sub.mega:has(.adm-mega-col),
+.adm-topnav .adm-topnav-sub.mega:has(.adm-mega-col) {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    align-items: start;
+    gap: 8px 24px;
+}
+@media (max-width: 760px) {
+    html[data-layout="topbar"] .adm-topnav .adm-topnav-sub.mega:has(.adm-mega-col),
+    .adm-topnav .adm-topnav-sub.mega:has(.adm-mega-col) {
+        grid-auto-flow: row; grid-auto-columns: auto; grid-template-columns: 1fr 1fr;
+    }
+}
+.adm-mega-col { display: flex; flex-direction: column; }
+.adm-mega-head {
+    display: block; font-size: 11px; font-weight: 700; letter-spacing: .06em;
+    text-transform: uppercase; color: var(--text-faint);
+    padding: 6px 12px 8px; margin-bottom: 2px; border-bottom: 1px solid var(--border);
+}
+.adm-mega-list { list-style: none; margin: 0; padding: 4px 0 0; display: flex; flex-direction: column; gap: 2px; }
+/* En-tête de section dans la sidebar repliable. */
+.adm-submenu .adm-nav-section {
+    font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--text-faint); padding: 10px 12px 4px; pointer-events: none;
+}
 
 .adm-header-title { font-weight: 700; font-size: 17px; letter-spacing: -.3px; }
 html[data-layout="topbar"] .adm-header-title { display: none; }
@@ -538,3 +584,14 @@ html[data-theme="dark"] .adm-install-warn { color: var(--amber); }
     color: inherit; opacity: .6; line-height: 1;
 }
 .adm-install-x:hover { opacity: 1; }
+
+/* Bandeau « mode maintenance actif » (rouge, sous le bandeau /install) */
+.adm-maint-warn {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    background: var(--red-soft); color: #9b1c1c;
+    font-size: 12.5px; font-weight: 600;
+    padding: 7px 14px; position: relative; z-index: 59;
+    border-bottom: 1px solid var(--red);
+}
+html[data-theme="dark"] .adm-maint-warn { color: var(--red); }
+.adm-maint-warn a { color: inherit; text-decoration: underline; }

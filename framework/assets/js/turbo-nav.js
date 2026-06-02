@@ -196,6 +196,22 @@
         return true;
     }
 
+    // ─── Resynchronisation du « chrome » (sidebar / topnav / titre) ─────────────
+    // TurboNav ne remplace que #admin-content ; sans cela, l'état actif du menu
+    // resterait celui de la page précédente. On réinjecte le menu rendu par le
+    // serveur (qui calcule déjà le bon item actif via AdminMenuService::isActive).
+    function syncChrome(doc) {
+        if (!doc) return;
+        ['.adm-nav', '.adm-topnav'].forEach(function (sel) {
+            var cur = document.querySelector(sel);
+            var neu = doc.querySelector(sel);
+            if (cur && neu) cur.innerHTML = neu.innerHTML;
+        });
+        var curTitle = document.querySelector('.adm-header-title');
+        var newTitle = doc.querySelector('.adm-header-title');
+        if (curTitle && newTitle) curTitle.textContent = newTitle.textContent;
+    }
+
     // ─── Préchargement au survol (V2) ─────────────────────────────────────────
     // Démarre un fetch silencieux dès que la souris survole un lien éligible.
     // Le résultat est mis en cache — au clic, la page est déjà disponible.
@@ -299,12 +315,15 @@
                 }
             }
 
-            const { content, title, extraScripts } = extractContent(html);
+            const { content, title, extraScripts, doc } = extractContent(html);
             const swapped = swapContent(content, title, url, extraScripts);
 
             if (!swapped) {
                 throw new Error('Swap échoué');
             }
+
+            // Resynchronise l'état actif du menu (sidebar + topnav) depuis le serveur.
+            syncChrome(doc);
 
             // Mise à jour de l'URL dans le navigateur
             if (pushState) {

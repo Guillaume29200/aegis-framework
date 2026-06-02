@@ -1,10 +1,41 @@
 /* ==========================================================================
-   eSport-CMS V4 — Admin UI (vanilla, sans dépendance)
+   Aegis Framework V4 — Admin UI (vanilla, sans dépendance)
    Gère : thème, disposition, plein écran, accent, panneau de contrôle,
    navigation mobile, dropdowns, et compat des widgets Bootstrap restants.
    Les préférences sont persistées en localStorage.
    La pré-application (anti-FOUC) est faite par un script inline dans <head>.
    ========================================================================== */
+/* Shim minimal de l'API Bootstrap (Modal/Collapse/Tab) pour les modules qui
+   ouvrent encore des composants par JS (ex. GameNodePanel). Bootstrap n'est plus
+   chargé ; ce shim bascule simplement la classe .show (CSS gérée par compat.css)
+   et reste cohérent avec la délégation data-bs-* d'ui.js. */
+(function () {
+    if (window.bootstrap && window.bootstrap.Modal) return;
+    function el(x) { return typeof x === 'string' ? document.querySelector(x) : x; }
+    function Modal(target) { this._el = el(target); }
+    Modal.prototype.show = function () { if (this._el) { document.body.style.overflow = 'hidden'; this._el.classList.add('show'); } };
+    Modal.prototype.hide = function () {
+        if (this._el) { this._el.classList.remove('show'); }
+        if (!document.querySelector('.modal.show')) document.body.style.overflow = '';
+    };
+    Modal.prototype.toggle = function () { this._el && this._el.classList.toggle('show'); };
+    Modal.prototype.dispose = function () {};
+    Modal.getOrCreateInstance = function (t) { return new Modal(t); };
+    Modal.getInstance = function (t) { return new Modal(t); };
+
+    function Toggleable(target) { this._el = el(target); }
+    Toggleable.prototype.show = function () { this._el && this._el.classList.add('show', 'active'); };
+    Toggleable.prototype.hide = function () { this._el && this._el.classList.remove('show', 'active'); };
+    Toggleable.getOrCreateInstance = function (t) { return new Toggleable(t); };
+    Toggleable.getInstance = function (t) { return new Toggleable(t); };
+
+    window.bootstrap = window.bootstrap || {};
+    window.bootstrap.Modal = window.bootstrap.Modal || Modal;
+    window.bootstrap.Collapse = window.bootstrap.Collapse || Toggleable;
+    window.bootstrap.Tab = window.bootstrap.Tab || Toggleable;
+    window.bootstrap.Tooltip = window.bootstrap.Tooltip || function () { return { dispose: function () {} }; };
+})();
+
 (function () {
     'use strict';
 
@@ -148,6 +179,23 @@
                 if (!wasOpen) topItem.classList.add('open');
                 return;
             }
+        }
+
+        /* Clic sur un lien DANS un sous-menu/mega-menu topbar : fermer le menu.
+           Indispensable avec TurboNav (la page ne se recharge pas) et utile
+           pour que le panneau ne reste pas ouvert sous le curseur (:hover). */
+        var subLink = e.target.closest('.adm-topnav-sub a');
+        if (subLink) {
+            var ownerItem = subLink.closest('.adm-topnav-item');
+            if (ownerItem) {
+                ownerItem.classList.remove('open');
+                ownerItem.classList.add('closing'); // neutralise le :hover jusqu'à ce que la souris sorte
+                ownerItem.addEventListener('mouseleave', function clr() {
+                    ownerItem.classList.remove('closing');
+                    ownerItem.removeEventListener('mouseleave', clr);
+                });
+            }
+            /* on ne return pas : on laisse le lien naviguer (TurboNav ou normal) */
         }
 
         if (!t) {
