@@ -7,10 +7,10 @@ use Auth\Services\AuthService;
 use Framework\Services\Database;
 use Framework\Services\Logger;
 use Framework\Security\CSRFProtection;
-use GameServerHub\Controllers\GamePanel\Docker\DockerRuntimeService;
-use GameServerHub\Services\DedicatedServerService;
-use GameServerHub\Services\FTPService;
-use GameServerHub\Services\SSHService;
+use GameNodePanel\Controllers\GamePanel\Docker\DockerRuntimeService;
+use GameNodePanel\Services\DedicatedServerService;
+use GameNodePanel\Services\FTPService;
+use GameNodePanel\Services\SSHService;
 
 /**
  * Contrôleur Admin
@@ -390,15 +390,15 @@ class AdminController
 
     private function deleteUserGameServers(int $userId): int
     {
-        if (!$this->tableExists('gsh_game_servers')) {
+        if (!$this->tableExists('gnp_game_servers')) {
             return 0;
         }
 
         $gameServers = $this->db->query(
             "SELECT gs.*, g.name AS game_name, ds.ip_address AS server_ip
-             FROM gsh_game_servers gs
-             LEFT JOIN gsh_games g ON g.id = gs.game_id
-             LEFT JOIN gsh_dedicated_servers ds ON ds.id = gs.dedicated_server_id
+             FROM gnp_game_servers gs
+             LEFT JOIN gnp_games g ON g.id = gs.game_id
+             LEFT JOIN gnp_dedicated_servers ds ON ds.id = gs.dedicated_server_id
              WHERE gs.user_id = ?
              ORDER BY gs.id ASC",
             [$userId]
@@ -469,7 +469,7 @@ class AdminController
         }
 
         $this->cleanupGameServerDatabaseLinks($gameServerId);
-        $this->db->delete('gsh_game_servers', ['id' => $gameServerId]);
+        $this->db->delete('gnp_game_servers', ['id' => $gameServerId]);
 
         $this->logger->info('Serveur de jeu supprime avec utilisateur', [
             'game_server_id' => $gameServerId,
@@ -556,15 +556,15 @@ class AdminController
 
     private function cleanupGameServerDatabaseLinks(int $gameServerId): void
     {
-        if ($this->tableExists('gsh_ftp_accounts') && $this->tableExists('gsh_ftp_logs')) {
-            $ftpAccounts = $this->db->query('SELECT id FROM gsh_ftp_accounts WHERE game_server_id = ?', [$gameServerId]);
+        if ($this->tableExists('gnp_ftp_accounts') && $this->tableExists('gnp_ftp_logs')) {
+            $ftpAccounts = $this->db->query('SELECT id FROM gnp_ftp_accounts WHERE game_server_id = ?', [$gameServerId]);
             foreach ($ftpAccounts as $ftpAccount) {
-                $this->db->delete('gsh_ftp_logs', ['ftp_account_id' => (int)$ftpAccount['id']]);
+                $this->db->delete('gnp_ftp_logs', ['ftp_account_id' => (int)$ftpAccount['id']]);
             }
         }
 
         foreach ($this->gameServerLinkedTables() as $table) {
-            if ($table === 'gsh_game_servers') {
+            if ($table === 'gnp_game_servers') {
                 continue;
             }
 
@@ -580,7 +580,7 @@ class AdminController
                  FROM information_schema.columns
                  WHERE table_schema = DATABASE()
                    AND column_name = 'game_server_id'
-                   AND table_name LIKE 'gsh\\_%'"
+                   AND table_name LIKE 'gnp\\_%'"
             );
         } catch (\Throwable) {
             return [];
@@ -589,7 +589,7 @@ class AdminController
         $tables = [];
         foreach ($rows as $row) {
             $table = (string)($row['table_name'] ?? '');
-            if (preg_match('/^gsh_[a-z0-9_]+$/', $table)) {
+            if (preg_match('/^gnp_[a-z0-9_]+$/', $table)) {
                 $tables[] = $table;
             }
         }
@@ -599,14 +599,14 @@ class AdminController
 
     private function isDockerRuntimeServer(array $gameServer): bool
     {
-        if (!$this->tableExists('gsh_game_versions')) {
+        if (!$this->tableExists('gnp_game_versions')) {
             return false;
         }
 
         foreach (['game_version_id', 'version_id', 'server_version_id'] as $key) {
             if (!empty($gameServer[$key])) {
                 $version = $this->db->queryOne(
-                    'SELECT game_runtime_type, docker_image FROM gsh_game_versions WHERE id = ? LIMIT 1',
+                    'SELECT game_runtime_type, docker_image FROM gnp_game_versions WHERE id = ? LIMIT 1',
                     [(int)$gameServer[$key]]
                 );
 
@@ -616,11 +616,11 @@ class AdminController
             }
         }
 
-        if ($this->tableExists('gsh_installations')) {
+        if ($this->tableExists('gnp_installations')) {
             $installation = $this->db->queryOne(
                 "SELECT i.id
-                 FROM gsh_installations i
-                 LEFT JOIN gsh_game_versions gv ON gv.id = i.version_id
+                 FROM gnp_installations i
+                 LEFT JOIN gnp_game_versions gv ON gv.id = i.version_id
                  WHERE i.game_server_id = ?
                    AND (i.install_type = 'docker' OR gv.game_runtime_type = 'docker')
                  ORDER BY i.created_at DESC, i.id DESC
@@ -635,7 +635,7 @@ class AdminController
 
         $version = $this->db->queryOne(
             "SELECT game_runtime_type, docker_image
-             FROM gsh_game_versions
+             FROM gnp_game_versions
              WHERE game_id = ? AND game_runtime_type = 'docker'
              ORDER BY is_default DESC, id DESC
              LIMIT 1",
@@ -691,9 +691,9 @@ class AdminController
             ORDER BY day ASC
         ");
 
-        $gshEnabled = $this->tableExists('gsh_dedicated_servers');
+        $gnpEnabled = $this->tableExists('gnp_dedicated_servers');
 
-        $gsh = [
+        $gnp = [
             'dedicated_online'     => 0,
             'dedicated_total'      => 0,
             'game_servers_running' => 0,
@@ -704,15 +704,15 @@ class AdminController
             'games_active'         => 0,
         ];
 
-        if ($gshEnabled) {
+        if ($gnpEnabled) {
             $r = $this->db->queryOne(
                 "SELECT COUNT(*) as total, SUM(status = 'online') as online
-                 FROM gsh_dedicated_servers"
+                 FROM gnp_dedicated_servers"
             );
-            $gsh['dedicated_total']  = (int)($r['total']  ?? 0);
-            $gsh['dedicated_online'] = (int)($r['online'] ?? 0);
+            $gnp['dedicated_total']  = (int)($r['total']  ?? 0);
+            $gnp['dedicated_online'] = (int)($r['online'] ?? 0);
 
-            if ($this->tableExists('gsh_game_servers')) {
+            if ($this->tableExists('gnp_game_servers')) {
                 $r = $this->db->queryOne(
                     "SELECT COUNT(*)                     AS total,
                             SUM(status = 'running')      AS `running`,
@@ -722,40 +722,40 @@ class AdminController
                             SUM(status = 'uninstalled')  AS `uninstalled`,
                             SUM(status = 'starting')     AS `starting`,
                             SUM(status = 'stopping')     AS `stopping`
-                     FROM gsh_game_servers"
+                     FROM gnp_game_servers"
                 );
-                $gsh['game_servers_total']       = (int)($r['total']       ?? 0);
-                $gsh['game_servers_running']     = (int)($r['running']     ?? 0);
-                $gsh['game_servers_stopped']     = (int)($r['stopped']     ?? 0);
-                $gsh['game_servers_error']       = (int)($r['error']       ?? 0);
-                $gsh['game_servers_installing']  = (int)($r['installing']  ?? 0);
-                $gsh['game_servers_uninstalled'] = (int)($r['uninstalled'] ?? 0);
+                $gnp['game_servers_total']       = (int)($r['total']       ?? 0);
+                $gnp['game_servers_running']     = (int)($r['running']     ?? 0);
+                $gnp['game_servers_stopped']     = (int)($r['stopped']     ?? 0);
+                $gnp['game_servers_error']       = (int)($r['error']       ?? 0);
+                $gnp['game_servers_installing']  = (int)($r['installing']  ?? 0);
+                $gnp['game_servers_uninstalled'] = (int)($r['uninstalled'] ?? 0);
             }
 
-            if ($this->tableExists('gsh_installations')) {
+            if ($this->tableExists('gnp_installations')) {
                 $r = $this->db->queryOne(
-                    "SELECT COUNT(*) as c FROM gsh_installations
+                    "SELECT COUNT(*) as c FROM gnp_installations
                      WHERE status IN ('running', 'pending')"
                 );
-                $gsh['installs_running'] = (int)($r['c'] ?? 0);
+                $gnp['installs_running'] = (int)($r['c'] ?? 0);
             }
 
-            if ($this->tableExists('gsh_odin_alerts')) {
+            if ($this->tableExists('gnp_odin_alerts')) {
                 $r = $this->db->queryOne(
-                    "SELECT COUNT(*) as c FROM gsh_odin_alerts WHERE is_resolved = 0"
+                    "SELECT COUNT(*) as c FROM gnp_odin_alerts WHERE is_resolved = 0"
                 );
-                $gsh['odin_alerts'] = (int)($r['c'] ?? 0);
+                $gnp['odin_alerts'] = (int)($r['c'] ?? 0);
             }
 
-            if ($this->tableExists('gsh_games')) {
+            if ($this->tableExists('gnp_games')) {
                 $r = $this->db->queryOne(
-                    "SELECT COUNT(*) as c FROM gsh_games WHERE status = 'active'"
+                    "SELECT COUNT(*) as c FROM gnp_games WHERE status = 'active'"
                 );
-                $gsh['games_active'] = (int)($r['c'] ?? 0);
+                $gnp['games_active'] = (int)($r['c'] ?? 0);
             }
 
             $servers = $this->db->query(
-                "SELECT id, name, ip_address, status, nbr_core, nbr_ram FROM gsh_dedicated_servers ORDER BY name ASC"
+                "SELECT id, name, ip_address, status, nbr_core, nbr_ram FROM gnp_dedicated_servers ORDER BY name ASC"
             );
             foreach ($servers as &$srv) {
                 $sid = (int)$srv['id'];
@@ -763,32 +763,32 @@ class AdminController
                     "SELECT cpu_percent, memory_percent, disk_percent,
                             memory_used_mb, memory_total_mb,
                             disk_used_gb, disk_total_gb, collected_at
-                     FROM gsh_odin_metrics
+                     FROM gnp_odin_metrics
                      WHERE dedicated_server_id = ?
                      ORDER BY collected_at DESC LIMIT 1",
                     [$sid]
                 );
                 $srv['running_game_servers'] = (int)($this->db->queryOne(
-                    "SELECT COUNT(*) as c FROM gsh_game_servers
+                    "SELECT COUNT(*) as c FROM gnp_game_servers
                      WHERE dedicated_server_id = ? AND status = 'running'", [$sid]
                 )['c'] ?? 0);
                 $srv['total_game_servers'] = (int)($this->db->queryOne(
-                    "SELECT COUNT(*) as c FROM gsh_game_servers
+                    "SELECT COUNT(*) as c FROM gnp_game_servers
                      WHERE dedicated_server_id = ? AND status != 'uninstalled'", [$sid]
                 )['c'] ?? 0);
             }
             unset($srv);
-            $gsh['servers'] = $servers;
+            $gnp['servers'] = $servers;
 
-            if ($this->tableExists('gsh_game_servers')) {
-                $gsh['active_game_servers'] = $this->db->query(
+            if ($this->tableExists('gnp_game_servers')) {
+                $gnp['active_game_servers'] = $this->db->query(
                     "SELECT gs.id, gs.name, gs.port, gs.status, gs.updated_at,
                             g.name    AS game_name,
                             g.icon_url,
                             ds.name   AS ds_name
-                     FROM gsh_game_servers gs
-                     JOIN gsh_games             g  ON gs.game_id            = g.id
-                     JOIN gsh_dedicated_servers ds ON gs.dedicated_server_id = ds.id
+                     FROM gnp_game_servers gs
+                     JOIN gnp_games             g  ON gs.game_id            = g.id
+                     JOIN gnp_dedicated_servers ds ON gs.dedicated_server_id = ds.id
                      WHERE gs.status IN ('running','stopped','error','starting','stopping')
                      ORDER BY FIELD(gs.status,'running','starting','stopping','error','stopped') ASC,
                               gs.updated_at DESC
@@ -796,35 +796,35 @@ class AdminController
                 );
             }
 
-            if ($this->tableExists('gsh_installations')) {
-                $gsh['recent_installs'] = $this->db->query(
+            if ($this->tableExists('gnp_installations')) {
+                $gnp['recent_installs'] = $this->db->query(
                     "SELECT i.id, i.status, i.progress, i.current_step,
                             i.install_type, i.updated_at, i.error_message,
                             g.name  AS game_name,
                             g.icon_url,
                             ds.name AS server_name
-                     FROM gsh_installations i
-                     JOIN gsh_games             g  ON i.game_id   = g.id
-                     JOIN gsh_dedicated_servers ds ON i.server_id = ds.id
+                     FROM gnp_installations i
+                     JOIN gnp_games             g  ON i.game_id   = g.id
+                     JOIN gnp_dedicated_servers ds ON i.server_id = ds.id
                      ORDER BY i.updated_at DESC
                      LIMIT 6"
                 );
             }
 
-            $gsh['chart_data'] = [];
+            $gnp['chart_data'] = [];
             foreach ($servers as $srv) {
                 if ($srv['status'] !== 'online') continue;
                 $pts = $this->db->query(
                     "SELECT cpu_percent, memory_percent,
                             DATE_FORMAT(collected_at, '%H:%i') AS label
-                     FROM gsh_odin_metrics
+                     FROM gnp_odin_metrics
                      WHERE dedicated_server_id = ?
                        AND collected_at >= NOW() - INTERVAL 24 HOUR
                      ORDER BY collected_at ASC LIMIT 48",
                     [(int)$srv['id']]
                 );
                 if (!empty($pts)) {
-                    $gsh['chart_data'][$srv['id']] = ['name' => $srv['name'], 'points' => $pts];
+                    $gnp['chart_data'][$srv['id']] = ['name' => $srv['name'], 'points' => $pts];
                 }
             }
         }
@@ -836,8 +836,8 @@ class AdminController
             'users_by_role'       => $usersByRole,
             'users_by_status'     => $usersByStatus,
             'registrations_chart' => $registrationsChart,
-            'gsh_enabled'         => $gshEnabled,
-            'gsh'                 => $gsh,
+            'gnp_enabled'         => $gnpEnabled,
+            'gnp'                 => $gnp,
         ];
     }
 

@@ -18,6 +18,9 @@ use Framework\Services\AuthTracker;
  */
 class AuthService
 {
+    /** Durée de vie du jeton « Se souvenir de moi » (secondes). 7 jours. */
+    private const REMEMBER_TTL = 604800;
+
     private Database $db;
     private ?AuthTracker $authTracker = null;
     private ?\Framework\Security\RateLimiter $rateLimiter = null;
@@ -417,7 +420,7 @@ class AuthService
     private function createRememberToken(int $userId): void
     {
         $token = bin2hex(random_bytes(32));
-        $expiresAt = date('Y-m-d H:i:s', time() + 2592000); // 30 jours
+        $expiresAt = date('Y-m-d H:i:s', time() + self::REMEMBER_TTL); // 7 jours
         
         $stmt = $this->db->prepare("
             INSERT INTO remember_tokens (user_id, token, ip_address, user_agent, expires_at)
@@ -433,18 +436,18 @@ class AuthService
         ]);
         
         // Définir le cookie
-        $this->setRememberCookie($token, time() + 2592000);
+        $this->setRememberCookie($token, time() + self::REMEMBER_TTL);
     }
     
     private function rotateRememberToken(int $rememberTokenId): void
     {
         $newToken = bin2hex(random_bytes(32));
-        $expiresAt = date('Y-m-d H:i:s', time() + 2592000);
+        $expiresAt = date('Y-m-d H:i:s', time() + self::REMEMBER_TTL);
 
         $stmt = $this->db->prepare("UPDATE remember_tokens SET token = ?, expires_at = ?, created_at = NOW() WHERE id = ?");
         $stmt->execute([$newToken, $expiresAt, $rememberTokenId]);
 
-        $this->setRememberCookie($newToken, time() + 2592000);
+        $this->setRememberCookie($newToken, time() + self::REMEMBER_TTL);
     }
 
     private function setRememberCookie(string $token, int $expiresAt): void

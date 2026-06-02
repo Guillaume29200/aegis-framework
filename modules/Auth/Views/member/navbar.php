@@ -2,7 +2,7 @@
 <aside class="member-sidebar">
     <div class="member-brand">
         <div class="member-brand-icon">EC</div>
-        <div><strong>eSport-CMS</strong><span>Espace client</span></div>
+        <div><strong>Aegis Framework</strong><span>Espace client</span></div>
     </div>
     <nav class="member-nav">
         <a class="<?= $activePage === 'dashboard' ? 'active' : '' ?>" href="<?= u('/member/dashboard') ?>"><span class="ico">🏠</span> Tableau de bord</a>

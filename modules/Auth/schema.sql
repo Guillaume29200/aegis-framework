@@ -78,26 +78,12 @@ CREATE TABLE IF NOT EXISTS `user_sessions` (
   CONSTRAINT `fk_user_sessions_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Table des permissions utilisateurs (optionnel)
-CREATE TABLE IF NOT EXISTS `user_permissions` (
-  `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
-  `user_id` INT(11) UNSIGNED NOT NULL,
-  `permission` VARCHAR(100) NOT NULL,
-  `granted` TINYINT(1) NOT NULL DEFAULT 1,
-  `granted_by` INT(11) UNSIGNED DEFAULT NULL,
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `unique_user_permission` (`user_id`, `permission`),
-  KEY `idx_permission` (`permission`),
-  CONSTRAINT `fk_user_permissions_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 -- Insertion de l'utilisateur admin par défaut
 -- Mot de passe: admin123 (à changer immédiatement en production)
 INSERT IGNORE INTO `users` (`username`, `email`, `password`, `role`, `status`, `email_verified`, `created_at`) 
 VALUES (
   'admin',
-  'admin@esport-cms.local',
+  'admin@aegis-framework.local',
   '$argon2id$v=19$m=65536,t=4,p=1$cGRVWUhyVEJGYUdqU1Ew$hxQzHfJhYCRvdGR6fVVRPuBLKCJzLHGwOKJxJKRLQ',
   'admin',
   'active',

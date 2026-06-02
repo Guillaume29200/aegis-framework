@@ -25,6 +25,23 @@ class AuthController
         $this->csrf = $csrf;
     }
 
+    /**
+     * Signale un événement de sécurité au Centre de sécurité (si disponible).
+     * Découplé : passe par le conteneur global, sans dépendance dure.
+     */
+    private function reportSecurity(string $ruleKey, string $detail): void
+    {
+        $center = $GLOBALS['securityCenterService'] ?? null;
+        if ($center instanceof \Framework\Services\SecurityCenterService) {
+            try {
+                $center->recordEvent($center->clientIp(), $ruleKey, $detail);
+            } catch (\Throwable $e) {
+                // La sécurité ne doit jamais casser l'authentification.
+                error_log('[SecurityCenter] reportSecurity: ' . $e->getMessage());
+            }
+        }
+    }
+
     public function showLogin(): void
     {
         if ($this->authService->isLoggedIn()) {
@@ -50,11 +67,13 @@ class AuthController
 
         try {
             if (!$this->csrf->validateToken($_POST['csrf_token'] ?? '')) {
+                $this->reportSecurity('csrf_attack', 'Token CSRF invalide sur /auth/login');
                 http_response_code(403);
                 echo json_encode(['success' => false, 'error' => 'Token CSRF invalide. Veuillez recharger la page.']);
                 exit;
             }
         } catch (\Throwable $e) {
+            $this->reportSecurity('csrf_attack', 'Token CSRF absent/invalide sur /auth/login');
             http_response_code(403);
             echo json_encode(['success' => false, 'error' => 'Erreur de validation CSRF : ' . $e->getMessage()]);
             exit;
@@ -75,6 +94,12 @@ class AuthController
             $result = $this->authService->login($identifier, $password, $rememberMe, $screenResolution);
 
             if (!$result['success']) {
+                $err = (string)($result['error'] ?? '');
+                if (str_contains($err, 'Trop de tentatives')) {
+                    $this->reportSecurity('auth_flood', 'Limite de tentatives de connexion atteinte');
+                } else {
+                    $this->reportSecurity('brute_force', 'Échec de connexion pour « ' . $identifier . ' »');
+                }
                 http_response_code(401);
                 echo json_encode(['success' => false, 'error' => $result['error'] ?? 'Identifiants incorrects.']);
                 exit;
@@ -298,7 +323,7 @@ class AuthController
 
     private function sendPasswordResetEmail(array $resetRequest, string $resetUrl, array $settings): bool
     {
-        $siteName = trim((string)($settings['site_name'] ?? 'eSport-CMS'));
+        $siteName = trim((string)($settings['site_name'] ?? 'Aegis Framework'));
         $fromEmail = trim((string)($settings['password_reset_from_email'] ?? ''));
         if ($fromEmail === '') {
             $fromEmail = trim((string)($settings['webmaster_email'] ?? ''));

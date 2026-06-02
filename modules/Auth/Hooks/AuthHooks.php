@@ -20,19 +20,25 @@ class AuthHooks
             $uri = substr($uri, strlen($baseUrl)) ?: '/';
         }
         
-        // Routes publiques (ne nécessitent pas d'authentification)
+        // Racine = exactement « / » (et non « tout ce qui commence par / »,
+        // ce qui rendait la garde inopérante).
+        $path = strtok($uri, '?');
+        if ($path === '/' || $path === '') {
+            return;
+        }
+
+        // Préfixes de routes publiques (ne nécessitent pas d'authentification)
         $publicRoutes = [
             '/auth/login',
             '/auth/register',
             '/auth/forgot-password',
             '/auth/reset-password',
             '/api/',
-            '/'
         ];
-        
+
         // Vérifier si la route est publique
         foreach ($publicRoutes as $route) {
-            if (strpos($uri, $route) === 0) {
+            if (strpos($path, $route) === 0) {
                 return;
             }
         }

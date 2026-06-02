@@ -3,9 +3,9 @@
  * En-tête + styles partagés des pages d'authentification (autonome, sans Bootstrap).
  * Attend : $siteName, $logoImageUrl (optionnel), $authTitle (optionnel).
  */
-if (!defined('ESPORT_CMS')) die('Access denied');
+if (!defined('AEGIS_FRAMEWORK')) die('Access denied');
 $authTitle = $authTitle ?? 'Connexion';
-$siteName = $siteName ?? 'eSport-CMS';
+$siteName = $siteName ?? 'Aegis Framework';
 $faviconUrl = trim((string)($settings['favicon_url'] ?? ''));
 ?>
 <!doctype html>

@@ -1,6 +1,6 @@
 <?php
 /**
- * Dashboard Admin — eSport-CMS V4 (nouvelle UI)
+ * Dashboard Admin — Aegis Framework V4 (nouvelle UI)
  * Données fournies par AdminController::dashboard() : $stats, $currentUser
  */
 $pageTitle = 'Tableau de bord';

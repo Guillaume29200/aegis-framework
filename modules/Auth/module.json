@@ -5,6 +5,7 @@
   "author": "Lavelia Studio",
   "class": "Auth\\Auth",
   "core": true,
+  "category": "Système",
   "requires": {
     "cms_version": ">=4.0.0",
     "php_version": ">=8.5.0",
@@ -34,7 +35,7 @@
   "settings": {
     "allow_registration": true,
     "require_email_verification": false,
-    "remember_me_duration": 2592000,
+    "remember_me_duration": 604800,
     "session_lifetime": 7200,
     "max_login_attempts": 5,
     "lockout_duration": 900

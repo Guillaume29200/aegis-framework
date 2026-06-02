@@ -3,7 +3,7 @@
  * Création d'un utilisateur — UI maison (soumission AJAX)
  * Variables : $csrfToken
  */
-if (!defined('ESPORT_CMS')) die('Access denied');
+if (!defined('AEGIS_FRAMEWORK')) die('Access denied');
 
 $pageTitle = "Création d'utilisateur";
 admin_header($pageTitle);

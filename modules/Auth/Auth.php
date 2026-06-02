@@ -51,7 +51,7 @@ class Auth extends BaseModule
      */
     public function getAuthor(): string
     {
-        return 'eSport-CMS';
+        return 'Aegis Framework';
     }
 
     /**
@@ -161,7 +161,11 @@ class Auth extends BaseModule
     private function checkRememberMe(): void
     {
         if (!isset($_SESSION['user_id']) && isset($_COOKIE['remember_token'])) {
-            $authService = new Services\AuthService($this->db);
+            $db = $GLOBALS['db'] ?? null;
+            if (!$db instanceof \Framework\Services\Database) {
+                return; // base indisponible : on ignore la restauration silencieusement
+            }
+            $authService = new Services\AuthService($db);
             $authService->loginFromRememberToken($_COOKIE['remember_token']);
         }
     }
@@ -190,7 +194,7 @@ class Auth extends BaseModule
         
         $adminData = [
             'username' => 'admin',
-            'email' => 'admin@esport-cms.local',
+            'email' => 'admin@aegis-framework.local',
             'password' => $hashedPassword,
             'role' => 'admin',
             'status' => 'active',

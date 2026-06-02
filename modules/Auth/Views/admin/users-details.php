@@ -3,7 +3,7 @@
  * Détails utilisateur — UI maison
  * Variables : $user, $logins[], $registrationData, $lastLogin, $mapData, $totalLogins, $uniqueIPs, $devices, $browsers, $csrfToken
  */
-if (!defined('ESPORT_CMS')) die('Access denied');
+if (!defined('AEGIS_FRAMEWORK')) die('Access denied');
 
 $pageTitle = 'Utilisateur — ' . ($user['username'] ?? '');
 admin_header($pageTitle);

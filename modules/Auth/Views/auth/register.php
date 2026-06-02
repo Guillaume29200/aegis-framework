@@ -1,8 +1,8 @@
 <?php
-if (!defined('ESPORT_CMS')) die('Access denied');
+if (!defined('AEGIS_FRAMEWORK')) die('Access denied');
 
 $settings = $settings ?? [];
-$siteName = trim((string)($settings['site_name'] ?? 'eSport-CMS'));
+$siteName = trim((string)($settings['site_name'] ?? 'Aegis Framework'));
 $loginCoverImage = trim((string)($settings['login_cover_image'] ?? ''));
 $loginLogoImage = trim((string)($settings['login_logo_image'] ?? ''));
 $coverImageUrl = $loginCoverImage !== '' ? u($loginCoverImage) : u('/framework/assets/images/login-images/login-cover.svg');

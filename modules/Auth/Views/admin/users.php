@@ -3,7 +3,7 @@
  * Liste des utilisateurs — UI maison
  * Variables : $users[], $csrfToken
  */
-if (!defined('ESPORT_CMS')) die('Access denied');
+if (!defined('AEGIS_FRAMEWORK')) die('Access denied');
 
 $pageTitle = 'Gestion des utilisateurs';
 admin_header($pageTitle);

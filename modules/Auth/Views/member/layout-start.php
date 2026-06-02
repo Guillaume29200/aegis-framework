@@ -11,7 +11,7 @@ $displayName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= member_h($pageTitle) ?> - eSport-CMS</title>
+    <title><?= member_h($pageTitle) ?> - Aegis Framework</title>
     <style>
         :root { --bg:#eef2f7; --panel:#fff; --panel-2:#f8fafc; --text:#111827; --muted:#64748b; --line:#e2e8f0; --brand:#2563eb; --brand-2:#14b8a6; --danger:#dc2626; --warn:#d97706; --ok:#16a34a; --shadow:0 14px 35px rgba(15,23,42,.08); --sidebar:#0f172a; --sidebar-text:#cbd5e1; --sidebar-active:#1d4ed8; }
         [data-theme="dark"] { --bg:#0b1120; --panel:#111827; --panel-2:#172033; --text:#e5e7eb; --muted:#94a3b8; --line:#263246; --brand:#60a5fa; --brand-2:#2dd4bf; --danger:#f87171; --warn:#fbbf24; --ok:#4ade80; --shadow:0 18px 45px rgba(0,0,0,.35); --sidebar:#050816; --sidebar-text:#cbd5e1; --sidebar-active:#2563eb; }

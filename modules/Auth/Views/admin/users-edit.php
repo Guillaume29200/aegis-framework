@@ -3,7 +3,7 @@
  * Édition d'un utilisateur — UI maison
  * Variables : $user, $csrfToken
  */
-if (!defined('ESPORT_CMS')) die('Access denied');
+if (!defined('AEGIS_FRAMEWORK')) die('Access denied');
 
 $pageTitle = 'Éditer — ' . ($user['username'] ?? '');
 admin_header($pageTitle);
