@@ -17,6 +17,10 @@ class RgpdService
     /** Durées de validité proposées (jours). Max légal CNIL : 13 mois (~395 j). */
     public const VALIDITY = [30, 90, 180, 365, 395];
 
+    /** Textes par défaut du bandeau cookies. */
+    public const DEFAULT_TITLE = 'Nous respectons votre vie privée 🍪';
+    public const DEFAULT_TEXT  = "Nous utilisons des cookies pour améliorer votre expérience. Certains sont essentiels au fonctionnement du site, d'autres optionnels. Vous pouvez accepter, refuser ou personnaliser vos choix.";
+
     public function __construct(Database $db)
     {
         $this->settings = new SettingsService($db);
@@ -47,8 +51,8 @@ class RgpdService
             'position'      => $this->settings->get('cookie_banner_position', 'bottom') === 'top' ? 'top' : 'bottom',
             'validity_days' => (int) ($this->settings->get('cookie_validity_days', 180) ?: 180),
             'policy_url'    => (string) $this->settings->get('rgpd_policy_url', ''),
-            'title'         => (string) $this->settings->get('rgpd_title', 'Nous respectons votre vie privée 🍪'),
-            'intro'         => (string) $this->settings->get('rgpd_text', "Nous utilisons des cookies pour améliorer votre expérience. Certains sont essentiels au fonctionnement du site, d'autres optionnels. Vous pouvez accepter, refuser ou personnaliser vos choix."),
+            'title'         => (string) ($this->settings->get('rgpd_title', '') ?: self::DEFAULT_TITLE),
+            'intro'         => (string) ($this->settings->get('rgpd_text', '') ?: self::DEFAULT_TEXT),
             'version'       => (int) $this->settings->get('rgpd_version', 1),
             'colors'        => [
                 'bg'     => (string) $this->settings->get('cookie_bg', '#16162a'),
@@ -73,8 +77,8 @@ class RgpdService
             'cookie_banner_position' => ['value' => ($p['cookie_banner_position'] ?? 'bottom') === 'top' ? 'top' : 'bottom', 'type' => 'string'],
             'cookie_validity_days'   => ['value' => in_array((int)($p['cookie_validity_days'] ?? 180), self::VALIDITY, true) ? (int)$p['cookie_validity_days'] : 180, 'type' => 'int'],
             'rgpd_policy_url'        => ['value' => trim((string)($p['rgpd_policy_url'] ?? '')), 'type' => 'string'],
-            'rgpd_title'             => ['value' => trim((string)($p['rgpd_title'] ?? '')) ?: 'Gestion des cookies', 'type' => 'string'],
-            'rgpd_text'              => ['value' => trim((string)($p['rgpd_text'] ?? '')), 'type' => 'string'],
+            'rgpd_title'             => ['value' => trim((string)($p['rgpd_title'] ?? '')) ?: self::DEFAULT_TITLE, 'type' => 'string'],
+            'rgpd_text'              => ['value' => trim((string)($p['rgpd_text'] ?? '')) ?: self::DEFAULT_TEXT, 'type' => 'string'],
             'cookie_cat_analytics'   => ['value' => !empty($p['cookie_cat_analytics']) ? '1' : '0', 'type' => 'string'],
             'cookie_cat_marketing'   => ['value' => !empty($p['cookie_cat_marketing']) ? '1' : '0', 'type' => 'string'],
             'cookie_cat_social'      => ['value' => !empty($p['cookie_cat_social']) ? '1' : '0', 'type' => 'string'],

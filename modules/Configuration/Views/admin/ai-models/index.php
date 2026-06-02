@@ -3,7 +3,7 @@
  * Gestion des modèles IA — liste (UI maison)
  * Variables : $models[], $modelsByProvider[], $csrfToken
  */
-if (!defined('ESPORT_CMS')) die('Access denied');
+if (!defined('AEGIS_FRAMEWORK')) die('Access denied');
 
 $pageTitle = $pageTitle ?? 'Modèles IA';
 admin_header($pageTitle);

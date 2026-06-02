@@ -3,7 +3,7 @@
  * Configuration / Paramètres — UI maison (onglets, sauvegarde AJAX par section)
  * Variables : $settings[], $recaptchaConfigured, $csrfToken
  */
-if (!defined('ESPORT_CMS')) die('Access denied');
+if (!defined('AEGIS_FRAMEWORK')) die('Access denied');
 
 $pageTitle = $pageTitle ?? 'Configuration';
 admin_header($pageTitle);
@@ -86,6 +86,11 @@ $on  = fn($k) => !empty($settings[$k]) ? 'checked' : '';
                         <option value="<?= $k ?>" <?= ($settings['maintenance_theme'] ?? 'moderne') === $k ? 'selected' : '' ?>><?= $lbl ?></option>
                     <?php endforeach; ?>
                 </select>
+            </div>
+            <label class="set-switch-row"><span><b>🖼️ Optimiser les images uploadées</b><small>Redimensionne et compresse automatiquement les images (logo, couverture, médias) à l'upload.</small></span><span class="set-sw"><input type="checkbox" name="image_optimize_enabled" <?= $on('image_optimize_enabled') ?>><i></i></span></label>
+            <div class="set-grid u-mt">
+                <div class="fld"><label class="form-label">Largeur max (px)</label><input class="form-control" type="number" name="image_max_width" value="<?= $val('image_max_width', '1920') ?>" min="320" max="5000"></div>
+                <div class="fld"><label class="form-label">Qualité (40–100)</label><input class="form-control" type="number" name="image_quality" value="<?= $val('image_quality', '82') ?>" min="40" max="100"></div>
             </div>
             <div class="set-actions"><button class="ui-btn primary" type="submit">💾 Enregistrer</button></div>
         </form>

@@ -3,7 +3,7 @@
  * Création d'un modèle IA — UI maison
  * Variables : $csrfToken
  */
-if (!defined('ESPORT_CMS')) die('Access denied');
+if (!defined('AEGIS_FRAMEWORK')) die('Access denied');
 
 $pageTitle = 'Nouveau modèle IA';
 admin_header($pageTitle);

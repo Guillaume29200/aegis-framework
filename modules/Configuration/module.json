@@ -5,6 +5,7 @@
     "author": "Lavelia Studio",
     "class": "Configuration\\Configuration",
     "core": true,
+    "category": "Système",
     "dependencies": [],
     "routes": true,
     "menu": [
@@ -20,6 +21,7 @@
                 { "label": "Modèles IA", "icon": "🤖", "url": "/admin/configuration/ai-models" },
                 { "label": "Modules", "icon": "🧩", "url": "/admin/modules" },
                 { "label": "Centre de sécurité", "icon": "🛡️", "url": "/admin/security" },
+                { "label": "Diagnostic", "icon": "🩺", "url": "/admin/diagnostic" },
                 { "label": "Monitoring", "icon": "📡", "url": "/admin/monitoring" }
             ]
         }

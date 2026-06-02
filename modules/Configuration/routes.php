@@ -27,6 +27,9 @@ return function($router) {
         $router->get('/seo',       'Configuration\\Controllers\\SeoController@index');
         $router->post('/seo/save', 'Configuration\\Controllers\\SeoController@save');
 
+        // Sitemap & robots.txt (contrôleur dédié)
+        $router->post('/sitemap/generate', 'Configuration\\Controllers\\SitemapController@generate');
+
         // ======================================
         // GESTION MODÈLES IA
         // ======================================

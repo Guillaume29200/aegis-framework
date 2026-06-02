@@ -7,17 +7,23 @@
 namespace Configuration\Controllers;
 
 use Configuration\Services\SettingsService;
+use Configuration\Services\MailService;
+use Configuration\Services\ImageSettingsService;
 use Framework\Services\Database;
 use Framework\Security\CSRFProtection;
 
 class ConfigurationController
 {
     private $settingsService;
+    private MailService $mailService;
+    private ImageSettingsService $imageSettings;
     private $csrf;
-    
+
     public function __construct(Database $db, CSRFProtection $csrf)
     {
         $this->settingsService = new SettingsService($db);
+        $this->mailService = new MailService($db);
+        $this->imageSettings = new ImageSettingsService($db);
         $this->csrf = $csrf;
     }
     
@@ -116,9 +122,12 @@ class ConfigurationController
             'cache_enabled' => ['value' => isset($_POST['cache_enabled']) ? 1 : 0, 'type' => 'bool'],
             'cache_ttl' => ['value' => (int)($_POST['cache_ttl'] ?? 3600), 'type' => 'int'],
             'maintenance_mode' => ['value' => isset($_POST['maintenance_mode']) ? 1 : 0, 'type' => 'bool'],
-            'maintenance_theme' => ['value' => $maintenanceTheme, 'type' => 'string']
+            'maintenance_theme' => ['value' => $maintenanceTheme, 'type' => 'string'],
         ];
-        
+
+        // Réglages d'optimisation des images (service dédié).
+        $this->imageSettings->save($_POST);
+
         if ($this->settingsService->setMultiple($updates)) {
             echo json_encode(['success' => true, 'message' => 'Paramètres système sauvegardés avec succès']);
         } else {
@@ -170,18 +179,7 @@ class ConfigurationController
             exit;
         }
 
-        $updates = [
-            'password_reset_from_email' => ['value' => trim($_POST['password_reset_from_email'] ?? ''), 'type' => 'string'],
-            'password_reset_from_name' => ['value' => trim($_POST['password_reset_from_name'] ?? ''), 'type' => 'string'],
-            'password_reset_email_subject' => ['value' => trim($_POST['password_reset_email_subject'] ?? ''), 'type' => 'string'],
-            'password_reset_email_body' => ['value' => trim($_POST['password_reset_email_body'] ?? ''), 'type' => 'string'],
-        ];
-
-        if ($this->settingsService->setMultiple($updates)) {
-            echo json_encode(['success' => true, 'message' => 'Paramètres emails sauvegardés avec succès']);
-        } else {
-            echo json_encode(['success' => false, 'message' => 'Erreur lors de la sauvegarde']);
-        }
+        echo json_encode($this->mailService->save($_POST));
         exit;
     }
     /**
@@ -344,6 +342,9 @@ class ConfigurationController
         if (!move_uploaded_file($tmpName, $targetPath)) {
             throw new \RuntimeException('Upload impossible : impossible de deplacer le fichier envoye vers framework/uploads.');
         }
+
+        // Optimisation automatique (service dédié, jpg/png/webp uniquement).
+        $this->imageSettings->optimize($targetPath, $extensionByMime);
 
         return '/framework/uploads/' . $filename;
     }

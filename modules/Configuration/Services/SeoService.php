@@ -12,6 +12,7 @@ use Framework\Services\Database;
 class SeoService
 {
     private SettingsService $settings;
+    private ImageSettingsService $imageSettings;
 
     /** Extensions autorisées par type d'asset. */
     private const ALLOWED = [
@@ -23,6 +24,7 @@ class SeoService
     public function __construct(Database $db)
     {
         $this->settings = new SettingsService($db);
+        $this->imageSettings = new ImageSettingsService($db);
     }
 
     /** @return array<string,mixed> */
@@ -129,9 +131,14 @@ class SeoService
         }
 
         $filename = sprintf('%s-%s-%s.%s', $type, date('Ymd-His'), bin2hex(random_bytes(6)), $ext);
-        if (!move_uploaded_file($tmp, $dir . '/' . $filename)) {
+        $dest = $dir . '/' . $filename;
+        if (!move_uploaded_file($tmp, $dest)) {
             throw new \RuntimeException("Impossible d'enregistrer le fichier {$type}.");
         }
+
+        // Optimisation (service dédié : raster uniquement, jamais SVG/ICO).
+        $this->imageSettings->optimize($dest, $ext);
+
         return '/framework/uploads/' . $filename;
     }
 }

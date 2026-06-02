@@ -3,7 +3,7 @@
  * SEO & médias — UI maison
  * Variables : $seo (config), $csrfToken
  */
-if (!defined('ESPORT_CMS')) die('Access denied');
+if (!defined('AEGIS_FRAMEWORK')) die('Access denied');
 
 $pageTitle = $pageTitle ?? 'SEO & médias';
 admin_header($pageTitle);
@@ -23,6 +23,11 @@ $asset = fn($p) => $p ? u($p) : '';
 </div>
 
 <div id="seo-flash"></div>
+<?php
+$flashOk  = $_SESSION['success'] ?? null; unset($_SESSION['success']);
+$flashErr = $_SESSION['error'] ?? null;   unset($_SESSION['error']);
+if ($flashOk): ?><div class="ui-card" style="border-color:var(--green-soft);margin-bottom:16px"><div class="ui-card-body" style="color:var(--green)"><?= $h($flashOk) ?></div></div><?php endif;
+if ($flashErr): ?><div class="ui-card" style="border-color:var(--red-soft);margin-bottom:16px"><div class="ui-card-body" style="color:var(--red)"><?= $h($flashErr) ?></div></div><?php endif; ?>
 
 <form id="seo-form" enctype="multipart/form-data">
     <input type="hidden" name="csrf_token" value="<?= $h($csrfToken ?? '') ?>">
@@ -97,6 +102,47 @@ $asset = fn($p) => $p ? u($p) : '';
 
     <div class="u-flex" style="justify-content:flex-end;margin-top:18px"><button type="submit" class="ui-btn primary">💾 Enregistrer le SEO</button></div>
 </form>
+
+<?php $sm = $sitemapStatus ?? ['sitemap_exists' => false, 'writable' => true]; ?>
+<div class="ui-card u-mt">
+    <div class="ui-card-head">🗺️ Sitemap &amp; robots.txt</div>
+    <div class="ui-card-body">
+        <p class="u-muted" style="margin-top:0">Génère <code>sitemap.xml</code> (accueil + forum : catégories, sujets et pages publiques) et <code>robots.txt</code> à la racine du site.</p>
+
+        <?php if (empty($sm['writable'])): ?>
+            <div class="ui-card" style="border-color:var(--amber-soft);margin-bottom:14px"><div class="ui-card-body" style="color:var(--amber)">⚠️ La racine du site n'est pas accessible en écriture — la génération échouera. Vérifiez les permissions.</div></div>
+        <?php endif; ?>
+
+        <div class="u-flex" style="gap:24px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
+            <div>
+                <div class="u-muted" style="font-size:12px">sitemap.xml</div>
+                <?php if (!empty($sm['sitemap_exists'])): ?>
+                    <div><span class="ui-badge green">✅ Généré</span> le <strong><?= $h($sm['sitemap_date']) ?></strong> · <?= (int)($sm['sitemap_urls'] ?? 0) ?> URL(s)</div>
+                <?php else: ?>
+                    <div><span class="ui-badge amber">⚠️ Non généré</span></div>
+                <?php endif; ?>
+            </div>
+            <div>
+                <div class="u-muted" style="font-size:12px">robots.txt</div>
+                <?php if (!empty($sm['robots_exists'])): ?>
+                    <div><span class="ui-badge green">✅ Généré</span> le <strong><?= $h($sm['robots_date']) ?></strong></div>
+                <?php else: ?>
+                    <div><span class="ui-badge amber">⚠️ Non généré</span></div>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <form method="post" action="<?= u('/admin/configuration/sitemap/generate') ?>">
+            <input type="hidden" name="csrf_token" value="<?= $h($csrfToken ?? '') ?>">
+            <button type="submit" class="ui-btn primary">
+                <?= !empty($sm['sitemap_exists']) ? '🔄 Mettre à jour / régénérer' : '⚙️ Générer le sitemap' ?>
+            </button>
+            <?php if (!empty($sm['sitemap_exists'])): ?>
+                <a class="ui-btn" href="<?= u('/sitemap.xml') ?>" target="_blank" rel="noopener">👁️ Voir le sitemap</a>
+            <?php endif; ?>
+        </form>
+    </div>
+</div>
 
 <style>
 .seo-preview { display: grid; place-items: center; height: 90px; border: 1px dashed var(--border-strong); border-radius: var(--radius); background: var(--surface-2); margin-bottom: 12px; overflow: hidden; }

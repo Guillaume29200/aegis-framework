@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Configuration\Controllers;
 
 use Configuration\Services\SeoService;
+use Configuration\Services\SitemapService;
 use Framework\Services\Database;
 use Framework\Security\CSRFProtection;
 
@@ -14,19 +15,22 @@ use Framework\Security\CSRFProtection;
 class SeoController
 {
     private SeoService $seo;
+    private SitemapService $sitemap;
     private CSRFProtection $csrf;
 
     public function __construct(Database $db, CSRFProtection $csrf)
     {
         $this->seo = new SeoService($db);
+        $this->sitemap = new SitemapService($db);
         $this->csrf = $csrf;
     }
 
     public function index(): void
     {
-        $pageTitle = 'SEO & médias';
-        $seo       = $this->seo->getConfig();
-        $csrfToken = $this->csrf->generateToken();
+        $pageTitle     = 'SEO & médias';
+        $seo           = $this->seo->getConfig();
+        $sitemapStatus = $this->sitemap->status();
+        $csrfToken     = $this->csrf->generateToken();
         require __DIR__ . '/../Views/admin/seo/index.php';
     }
 

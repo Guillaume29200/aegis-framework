@@ -3,7 +3,7 @@
  * Administration RGPD / Cookies (conforme CNIL) — UI maison
  * Variables : $rgpd (config), $csrfToken
  */
-if (!defined('ESPORT_CMS')) die('Access denied');
+if (!defined('AEGIS_FRAMEWORK')) die('Access denied');
 
 $pageTitle = $pageTitle ?? 'RGPD / Cookies';
 admin_header($pageTitle);

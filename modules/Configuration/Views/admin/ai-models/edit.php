@@ -3,7 +3,7 @@
  * Édition d'un modèle IA — UI maison
  * Variables : $model, $csrfToken
  */
-if (!defined('ESPORT_CMS')) die('Access denied');
+if (!defined('AEGIS_FRAMEWORK')) die('Access denied');
 
 $pageTitle = 'Éditer — ' . ($model['display_name'] ?? '');
 admin_header($pageTitle);
