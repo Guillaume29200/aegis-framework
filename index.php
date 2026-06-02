@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /**
- * eSport-CMS V4 - Point d'entrée principal
+ * Aegis Framework V4 - Point d'entrée principal
  * 
  * Architecture modulaire avec système de routing automatique.
  * Toute l'initialisation est dans bootstrap.php
@@ -42,6 +42,7 @@ try {
         'DebugBar' => $debugBar,
         'ModuleManager' => $moduleManager,
         'SecurityFirewallService' => $securityFirewallService,
+        'SecurityCenterService' => $securityCenterService,
         // Avec namespaces complets
         'Framework\Services\Database' => $db,
         'Framework\Security\CSRFProtection' => $csrfProtection,
@@ -52,6 +53,7 @@ try {
         'Framework\Services\DebugBar' => $debugBar,
         'Framework\ModuleManager\ModuleManager' => $moduleManager,
         'Framework\Services\SecurityFirewallService' => $securityFirewallService,
+        'Framework\Services\SecurityCenterService' => $securityCenterService,
     ]);
 
     // ─────────────────────────────────────────
@@ -93,7 +95,39 @@ try {
     if (empty($uri) || $uri[0] !== '/') {
         $uri = '/' . $uri;
     }
-    
+
+    // ============================================
+    // GARDE D'AUTHENTIFICATION — ZONE /admin
+    // ============================================
+    // Toute la zone d'administration exige une session "staff" (admin / superadmin
+    // / moderator). Bloque les anonymes ET les membres simples avant le dispatch,
+    // donc avant toute logique de contrôleur (ban IP, SSH, etc.).
+    $gatePath = strtok($uri, '?');
+    if (preg_match('#^/admin(?:/|$)#', $gatePath)) {
+        $isXhr = !empty($_SERVER['HTTP_X_REQUESTED_WITH'])
+              && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+        $loggedIn = isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true;
+        $role = $_SESSION['role'] ?? '';
+        $isStaff = in_array($role, ['admin', 'superadmin', 'moderator'], true);
+
+        if (!$loggedIn || !$isStaff) {
+            if ($isXhr) {
+                http_response_code(!$loggedIn ? 401 : 403);
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'error' => !$loggedIn ? 'Non authentifié' : 'Accès refusé']);
+            } elseif (!$loggedIn) {
+                header('Location: ' . u('/auth/login'));
+            } else {
+                http_response_code(403);
+                echo '<!doctype html><meta charset="utf-8"><title>403</title>'
+                   . '<div style="font-family:system-ui;max-width:480px;margin:80px auto;text-align:center">'
+                   . '<h1 style="font-size:48px;margin:0">403</h1><p>Accès réservé à l\'administration.</p>'
+                   . '<p><a href="' . u('/') . '">← Retour à l\'accueil</a></p></div>';
+            }
+            exit;
+        }
+    }
+
     // Buffer de sortie
     ob_start();
     $debugBar->mark('router.dispatch.start');

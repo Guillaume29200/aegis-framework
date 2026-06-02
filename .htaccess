@@ -1,0 +1,101 @@
+# ============================================
+# eSport-CMS V4 - Configuration Apache
+# ============================================
+
+RewriteEngine On
+DirectoryIndex index.php index.html
+
+# ============================================
+# FICHIERS STATIQUES (NE PAS PASSER PAR PHP)
+# ============================================
+
+# Assets (CSS, JS, images, fonts, etc.)
+RewriteRule ^assets/ - [L]
+
+# Uploads utilisateurs
+RewriteRule ^uploads/ - [L]
+
+# Modules statiques (assets, uploads internes des modules)
+RewriteRule ^modules/.*\.(jpg|jpeg|png|gif|webp|svg|ico|css|js|woff2?|ttf|eot|mp4|pdf|zip)$ - [L,NC]
+
+# Fichiers réels
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^ - [L]
+
+# Dossiers réels sauf racine
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteCond %{REQUEST_URI} !^/$
+RewriteRule ^ - [L]
+
+# ============================================
+# ROUTING PRINCIPAL
+# ============================================
+
+RewriteRule ^ index.php [QSA,L]
+
+# ============================================
+# SÉCURITÉ
+# ============================================
+
+# Bloquer fichiers sensibles
+<FilesMatch "\.(env|log|md)$">
+    Require all denied
+</FilesMatch>
+
+# Bloquer les JSON SAUF PlumeIA
+<FilesMatch "\.json$">
+    <If "%{REQUEST_URI} =~ m#^/modules/PlumeIA/assets/config/.*\.json$#">
+        Require all granted
+    </If>
+    <Else>
+        Require all denied
+    </Else>
+</FilesMatch>
+
+# Bloquer accès au cache framework
+<IfModule mod_rewrite.c>
+    RewriteRule ^framework/cache/ - [F,L]
+</IfModule>
+
+# Désactiver listing des répertoires
+Options -Indexes
+
+# Bloquer accès à .git
+RedirectMatch 404 /\.git
+
+# ============================================
+# HEADERS DE SÉCURITÉ
+# ============================================
+
+<IfModule mod_headers.c>
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+
+# ============================================
+# UPLOADS GSH
+# ============================================
+
+<IfModule mod_php.c>
+    php_value upload_max_filesize 256M
+    php_value post_max_size 260M
+    php_value max_file_uploads 10
+</IfModule>
+# ============================================
+# CACHE NAVIGATEUR (PERF)
+# ============================================
+
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 30 days"
+    ExpiresByType application/javascript "access plus 30 days"
+    ExpiresByType application/json "access plus 1 day"
+    ExpiresByType image/png "access plus 30 days"
+    ExpiresByType image/jpeg "access plus 30 days"
+    ExpiresByType image/webp "access plus 30 days"
+    ExpiresByType image/svg+xml "access plus 30 days"
+    ExpiresByType font/woff2 "access plus 30 days"
+</IfModule>
