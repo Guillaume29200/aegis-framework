@@ -305,7 +305,7 @@
         </div>
         
         <div class="footer">
-            🕷️ eSport-CMS V4 | Happy Halloween <?= date('Y') ?> 🦇
+            🕷️ Aegis Framework V4 | Happy Halloween <?= date('Y') ?> 🦇
         </div>
     </div>
     

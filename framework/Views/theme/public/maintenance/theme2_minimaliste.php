@@ -157,7 +157,7 @@
             </form>
         </div>
         
-        <div class="footer">eSport-CMS V4 | <?= date('Y') ?></div>
+        <div class="footer">Aegis Framework V4 | <?= date('Y') ?></div>
     </div>
     
     <script>

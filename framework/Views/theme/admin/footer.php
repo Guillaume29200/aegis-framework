@@ -1,4 +1,4 @@
-<?php if (!defined('ESPORT_CMS')) die('Access denied'); ?>
+<?php if (!defined('AEGIS_FRAMEWORK')) die('Access denied'); ?>
         </div><!-- /.adm-content -->
     </main><!-- /.adm-main -->
 </div><!-- /.adm -->
@@ -72,6 +72,14 @@
 <?php
 $cookieBanner = ROOT_PATH . '/framework/Views/theme/public/cookie-banner.php';
 if (file_exists($cookieBanner)) require $cookieBanner;
+?>
+
+<?php
+// Widget « Protéger mon IP » (O.D.I.N) — présent dans le DOM, mais affiché
+// uniquement sur les pages Game Node Panel (visibilité gérée par son JS,
+// réévaluée à chaque navigation TurboNav).
+$__gnpIpWidget = ROOT_PATH . '/modules/GameNodePanel/AILogGuard/ODIN/Views/admin/odin/protect_ip_widget.php';
+if (is_file($__gnpIpWidget)) require $__gnpIpWidget;
 ?>
 </body>
 </html>

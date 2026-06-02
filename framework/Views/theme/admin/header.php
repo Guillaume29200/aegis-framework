@@ -1,6 +1,6 @@
 <?php
 /**
- * Shell Admin — eSport-CMS V4 (nouvelle UX/UI, sans dépendance externe)
+ * Shell Admin — Aegis Framework V4 (nouvelle UX/UI, sans dépendance externe)
  *
  * Emplacement unique du thème d'administration. Les pages ne l'incluent jamais
  * directement : elles passent par les helpers admin_header() / admin_footer().
@@ -9,7 +9,7 @@
  * - Thème clair / sombre / auto · plein écran · accent personnalisable
  * - Menu 100% modulaire (AdminMenuService agrège les module.json actifs)
  */
-if (!defined('ESPORT_CMS')) die('Access denied');
+if (!defined('AEGIS_FRAMEWORK')) die('Access denied');
 
 $basePath = BASE_URL; // compat anciennes vues
 
@@ -45,6 +45,18 @@ if (!function_exists('adm_render_sidebar_item')) {
             echo '<span class="adm-nav-caret">▾</span></a>';
             echo '<ul class="adm-submenu">';
             foreach ($item['children'] as $child) {
+                if (!empty($child['children'])) {
+                    // Sous-groupe : en-tête de section + ses liens
+                    echo '<li class="adm-nav-section">' . htmlspecialchars($child['icon']) . ' ' . htmlspecialchars($child['label']) . '</li>';
+                    foreach ($child['children'] as $gc) {
+                        $gActive = \Framework\Services\AdminMenuService::isActive($gc, $path);
+                        echo '<li class="adm-nav-item' . ($gActive ? ' active' : '') . '">';
+                        echo '<a class="adm-nav-link" href="' . u($gc['url'] ?? '#') . '">';
+                        echo '<span class="adm-nav-icon">' . htmlspecialchars($gc['icon']) . '</span>';
+                        echo '<span class="adm-nav-label">' . htmlspecialchars($gc['label']) . '</span></a></li>';
+                    }
+                    continue;
+                }
                 $cActive = \Framework\Services\AdminMenuService::isActive($child, $path);
                 echo '<li class="adm-nav-item' . ($cActive ? ' active' : '') . '">';
                 echo '<a class="adm-nav-link" href="' . u($child['url'] ?? '#') . '">';
@@ -74,12 +86,26 @@ if (!function_exists('adm_render_topnav_item')) {
 
         echo '<div class="adm-topnav-item' . ($active ? ' active' : '') . '">';
         if ($hasChild) {
-            $mega = count($item['children']) > 6 ? ' mega' : '';
+            // Mega-menu opt-in : uniquement si le module le demande explicitement
+            // ("mega": true dans son module.json). Pas de déclenchement automatique.
+            $mega = !empty($item['mega']) ? ' mega' : '';
             echo '<span class="adm-topnav-link">' . $icon . ' ' . $label . ' <small>▾</small></span>';
             echo '<ul class="adm-topnav-sub' . $mega . '">';
             foreach ($item['children'] as $child) {
-                echo '<li><a href="' . u($child['url'] ?? '#') . '">'
-                    . htmlspecialchars($child['icon']) . ' ' . htmlspecialchars($child['label']) . '</a></li>';
+                if (!empty($child['children'])) {
+                    // Sous-groupe : colonne de section dans le mega-menu
+                    echo '<li class="adm-mega-col"><span class="adm-mega-head">'
+                        . htmlspecialchars($child['icon']) . ' ' . htmlspecialchars($child['label']) . '</span>';
+                    echo '<ul class="adm-mega-list">';
+                    foreach ($child['children'] as $gc) {
+                        echo '<li><a href="' . u($gc['url'] ?? '#') . '">'
+                            . htmlspecialchars($gc['icon']) . ' ' . htmlspecialchars($gc['label']) . '</a></li>';
+                    }
+                    echo '</ul></li>';
+                } else {
+                    echo '<li><a href="' . u($child['url'] ?? '#') . '">'
+                        . htmlspecialchars($child['icon']) . ' ' . htmlspecialchars($child['label']) . '</a></li>';
+                }
             }
             echo '</ul>';
         } else {
@@ -94,7 +120,7 @@ if (!function_exists('adm_render_topnav_item')) {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><?= htmlspecialchars($pageTitle ?? 'Administration') ?> — eSport-CMS</title>
+    <title><?= htmlspecialchars($pageTitle ?? 'Administration') ?></title>
 
     <!-- Pré-application des préférences (anti-FOUC) -->
     <script>
@@ -127,13 +153,28 @@ if (!function_exists('adm_render_topnav_item')) {
     <button class="adm-install-x" data-action="dismiss-install" title="Masquer pour cette session">✕</button>
 </div>
 <?php endif; ?>
+<?php
+// Bandeau d'information : mode maintenance actif (lecture directe du réglage).
+$admMaintenanceOn = false;
+try {
+    $admDb = $GLOBALS['db'] ?? null;
+    if ($admDb instanceof \Framework\Services\Database) {
+        $admRow = $admDb->queryOne("SELECT param_value FROM settings WHERE param_key = 'maintenance_mode'");
+        $admMaintenanceOn = $admRow && (string)$admRow['param_value'] === '1';
+    }
+} catch (\Throwable $e) { /* silencieux */ }
+if ($admMaintenanceOn): ?>
+<div class="adm-maint-warn" id="adm-maint-warn">
+    <span>🚧 Le <strong>mode maintenance</strong> est activé — le site est inaccessible au public. <a href="<?= u('/admin/configuration') ?>">Désactiver</a></span>
+</div>
+<?php endif; ?>
 <div class="adm">
 
     <!-- ═══════════════ SIDEBAR ═══════════════ -->
     <aside class="adm-sidebar">
         <div class="adm-brand">
             <span class="adm-brand-logo">⚡</span>
-            <span class="adm-brand-text">eSport-CMS<small>Administration</small></span>
+            <span class="adm-brand-text">Aegis Framework<small>Administration</small></span>
         </div>
         <nav class="adm-nav">
             <ul style="list-style:none;margin:0;padding:0">

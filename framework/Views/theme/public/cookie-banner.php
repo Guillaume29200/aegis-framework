@@ -3,7 +3,7 @@
  * Bandeau de consentement aux cookies (RGPD / CNIL) — piloté depuis l'admin.
  * Configuration : Admin → Configuration → RGPD / Cookies.
  */
-if (!defined('ESPORT_CMS')) {
+if (!defined('AEGIS_FRAMEWORK')) {
     return;
 }
 

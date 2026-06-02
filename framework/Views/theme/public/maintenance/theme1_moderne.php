@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🔧 Maintenance - eSport-CMS</title>
+    <title>🔧 Maintenance - Aegis Framework</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
@@ -207,7 +207,7 @@
         </div>
         
         <div class="footer">
-            <p>eSport-CMS V4 &copy; <?= date('Y') ?></p>
+            <p>Aegis Framework V4 &copy; <?= date('Y') ?></p>
         </div>
     </div>
     

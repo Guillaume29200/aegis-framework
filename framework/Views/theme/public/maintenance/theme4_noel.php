@@ -279,7 +279,7 @@
         </div>
         
         <div class="footer">
-            🎅 eSport-CMS V4 | Joyeuses Fêtes <?= date('Y') ?> 🎁
+            🎅 Aegis Framework V4 | Joyeuses Fêtes <?= date('Y') ?> 🎁
         </div>
     </div>
     

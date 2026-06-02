@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /**
- * eSport-CMS V4 - Bootstrap
+ * Aegis Framework V4 - Bootstrap
  * 
  * Fichier d'initialisation de l'application.
  * Chargé par index.php (web) et les scripts CRON (CLI).
@@ -14,14 +14,14 @@ declare(strict_types=1);
 // ============================================
 // PROTECTION CONTRE DOUBLE CHARGEMENT
 // ============================================
-if (defined('ESPORT_CMS')) {
+if (defined('AEGIS_FRAMEWORK')) {
     return;
 }
 
 // ============================================
 // CONSTANTES FONDAMENTALES
 // ============================================
-define('ESPORT_CMS', true);
+define('AEGIS_FRAMEWORK', true);
 define('ROOT_PATH', dirname(__DIR__)); // /framework -> racine
 
 // Détecter le mode CLI
@@ -247,7 +247,7 @@ set_exception_handler(function ($exception) use ($config) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>eSport-CMS — {$heading}</title>
+    <title>Aegis Framework — {$heading}</title>
     <style>
         *{margin:0;padding:0;box-sizing:border-box}
         body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh;display:flex;align-items:center;justify-content:center}
@@ -284,6 +284,7 @@ use Framework\Services\DebugBar;
 use Framework\Services\Logger;
 use Framework\Services\CacheService;
 use Framework\Services\SecurityFirewallService;
+use Framework\Services\SecurityCenterService;
 use Framework\Security\SessionManager;
 use Framework\Security\CSRFProtection;
 use Framework\Security\XSSProtection;
@@ -293,6 +294,7 @@ use Framework\Services\RecaptchaService;
 use Framework\Middleware\MaintenanceMode;
 use Framework\Middleware\SecurityHeaders;
 use Framework\Middleware\SecurityFirewall;
+use Framework\Middleware\SecurityCenterDetector;
 
 // ─────────────────────────────────────────
 // Database
@@ -354,6 +356,12 @@ $csrfProtection = new CSRFProtection($securityConfig);
 $xssProtection = new XSSProtection($securityConfig);
 $rateLimiter = new RateLimiter($db, $securityConfig);
 $securityFirewallService = new SecurityFirewallService($db, $securityConfig);
+$securityCenterService = new SecurityCenterService($db, $securityFirewallService);
+$GLOBALS['securityCenterService'] = $securityCenterService; // accès aux modules (hooks de détection)
+// Pont : les détections de rate-limit/flood du firewall alimentent le score du Centre.
+$securityFirewallService->setDetectionSink(static function (string $ip, string $ruleKey, string $reason) use ($securityCenterService): void {
+    $securityCenterService->recordEvent($ip, $ruleKey, $reason);
+});
 
 // ─────────────────────────────────────────
 // Maintenance Mode (web uniquement)
@@ -364,6 +372,10 @@ if (!IS_CLI) {
 
     $securityFirewall = new SecurityFirewall($securityFirewallService);
     $securityFirewall->handle();
+
+    // Détection catégorisée + scoring (Centre de sécurité) — après le firewall.
+    $securityCenterDetector = new SecurityCenterDetector($securityCenterService, $securityFirewallService);
+    $securityCenterDetector->handle();
 
     $maintenanceMode = new MaintenanceMode($db, $sessionManager, $csrfProtection);
     $maintenanceMode->handle();
