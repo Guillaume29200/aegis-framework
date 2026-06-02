@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /**
- * Installeur eSport-CMS V4 — assistant multi-étapes.
+ * Installeur Aegis Framework V4 — assistant multi-étapes.
  * Autonome (ne charge pas le CMS). Accès : /install/
  */
 session_start();
@@ -42,7 +42,7 @@ if ($action !== null) {
         $email    = trim($_POST['email'] ?? '');
         $password = (string) ($_POST['password'] ?? '');
         $confirm  = (string) ($_POST['confirm'] ?? '');
-        $siteName = trim($_POST['site_name'] ?? 'eSport-CMS');
+        $siteName = trim($_POST['site_name'] ?? 'Aegis Framework');
 
         if (strlen($username) < 3)                         { echo json_encode(['success' => false, 'message' => "Le nom d'utilisateur doit faire au moins 3 caractères."]); exit; }
         if (!filter_var($email, FILTER_VALIDATE_EMAIL))    { echo json_encode(['success' => false, 'message' => 'Adresse e-mail invalide.']); exit; }
@@ -98,7 +98,7 @@ $h = fn($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Installation — eSport-CMS V4</title>
+    <title>Installation — Aegis Framework V4</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="../framework/assets/css/admin/ui.css" rel="stylesheet">
     <style>
@@ -167,7 +167,7 @@ $h = fn($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
 <body>
 <div class="ins-wrap">
     <aside class="ins-aside">
-        <div class="ins-brand"><span class="logo">⚡</span> eSport-CMS</div>
+        <div class="ins-brand"><span class="logo">⚡</span> Aegis Framework</div>
         <ul class="ins-steps">
             <?php foreach ($steps as $n => $s): ?>
                 <li class="ins-step <?= $n === $step ? 'active' : ($n < $step ? 'done' : '') ?>">
@@ -183,13 +183,13 @@ $h = fn($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
         <div class="ins-card">
         <?php if ($installed && $step !== 1): ?>
             <h1 class="ins-h">✅ Déjà installé</h1>
-            <p class="ins-sub">eSport-CMS est déjà installé. Pour relancer l'assistant, supprimez le fichier <code>install/installed.lock</code>.</p>
+            <p class="ins-sub">Aegis Framework est déjà installé. Pour relancer l'assistant, supprimez le fichier <code>install/installed.lock</code>.</p>
             <a class="ui-btn primary" href="../admin/dashboard">Aller à l'administration →</a>
         <?php else: ?>
 
         <?php if ($step === 1): ?>
             <h1 class="ins-h">👋 Bienvenue</h1>
-            <p class="ins-sub">Cet assistant va installer <strong>eSport-CMS V4</strong> en quelques étapes. Préparez les identifiants de votre base de données MySQL.</p>
+            <p class="ins-sub">Cet assistant va installer <strong>Aegis Framework V4</strong> en quelques étapes. Préparez les identifiants de votre base de données MySQL.</p>
             <div class="ui-grid cols-2" style="gap:14px">
                 <div class="ui-card"><div class="ui-card-body"><div style="font-size:24px">🧩</div><b>Modulaire</b><p class="u-muted" style="margin:4px 0 0">Architecture extensible par modules.</p></div></div>
                 <div class="ui-card"><div class="ui-card-body"><div style="font-size:24px">🔒</div><b>Sécurisé</b><p class="u-muted" style="margin:4px 0 0">CSRF, rate-limiting, Argon2id, firewall.</p></div></div>
@@ -301,12 +301,12 @@ $h = fn($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
             </script>
 
         <?php elseif ($step === 4):
-            $a = $_SESSION['install_admin'] ?? ['username' => '', 'email' => '', 'site_name' => 'eSport-CMS']; ?>
+            $a = $_SESSION['install_admin'] ?? ['username' => '', 'email' => '', 'site_name' => 'Aegis Framework']; ?>
             <h1 class="ins-h">👤 Compte administrateur</h1>
             <p class="ins-sub">Créez le compte super-administrateur qui gérera le site.</p>
             <div id="adm-flash"></div>
             <form id="adm-form">
-                <div class="fld"><label>Nom du site</label><div class="box"><span class="ico">🏷️</span><input name="site_name" value="<?= $h($a['site_name'] ?? 'eSport-CMS') ?>" placeholder="Mon site"></div></div>
+                <div class="fld"><label>Nom du site</label><div class="box"><span class="ico">🏷️</span><input name="site_name" value="<?= $h($a['site_name'] ?? 'Aegis Framework') ?>" placeholder="Mon site"></div></div>
                 <div class="fld-2">
                     <div class="fld"><label>Nom d'utilisateur</label><div class="box"><span class="ico">👤</span><input name="username" value="<?= $h($a['username']) ?>" placeholder="admin" required></div></div>
                     <div class="fld"><label>E-mail</label><div class="box"><span class="ico">✉️</span><input type="email" name="email" value="<?= $h($a['email']) ?>" placeholder="vous@exemple.fr" required></div></div>

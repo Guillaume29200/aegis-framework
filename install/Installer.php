@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /**
- * Installer — moteur de l'installation eSport-CMS V4.
+ * Installer — moteur de l'installation Aegis Framework V4.
  * Autonome : ne dépend pas du bootstrap du CMS (la base n'existe pas encore).
  */
 class Installer
@@ -195,7 +195,7 @@ class Installer
             }
 
             $settings = [
-                ['site_name', $admin['site_name'] ?? 'eSport-CMS', 'string'],
+                ['site_name', $admin['site_name'] ?? 'Aegis Framework', 'string'],
                 ['site_description', '', 'string'],
                 ['webmaster_email', $admin['email'] ?? '', 'string'],
                 ['cms_version', '4.0.0', 'string'],
@@ -225,7 +225,7 @@ class Installer
                 ['default_ai_provider', 'openai', 'string'],
                 // E-mails (réinitialisation mot de passe)
                 ['password_reset_from_email', 'noreply@' . ($_SERVER['SERVER_NAME'] ?? 'exemple.com'), 'string'],
-                ['password_reset_from_name', $admin['site_name'] ?? 'eSport-CMS', 'string'],
+                ['password_reset_from_name', $admin['site_name'] ?? 'Aegis Framework', 'string'],
                 ['password_reset_email_subject', 'Réinitialisation de votre mot de passe - {site_name}', 'string'],
                 ['password_reset_email_body', "Bonjour {username},\r\n\r\nUne demande de réinitialisation de mot de passe a été effectuée pour votre compte {site_name}.\r\n\r\nCliquez sur le lien suivant pour choisir un nouveau mot de passe :\r\n{reset_link}\r\n\r\nCe lien expire dans {expires_minutes} minutes. Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.\r\n\r\n{site_name}", 'string'],
             ];

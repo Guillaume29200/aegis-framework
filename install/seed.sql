@@ -1,5 +1,5 @@
 -- ============================================================
--- eSport-CMS V4 — Données par défaut (seed)
+-- Aegis Framework V4 — Données par défaut (seed)
 -- Exécuté par l'installeur après le schéma.
 -- INSERT IGNORE : ré-exécutable sans écraser des données existantes.
 -- ============================================================
