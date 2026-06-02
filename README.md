@@ -1,4 +1,4 @@
-# Aegis-framework — Documentation du framework
+# Aegis Framework V4 — Documentation du framework
 
 CMS modulaire en PHP **8.5+**, architecture MVC légère, **sans aucune dépendance front externe** (ni Bootstrap ni jQuery — UI 100% maison). Conçu pour être étendu par des **modules** autonomes.
 
@@ -142,6 +142,7 @@ modules/MonModule/
 |----------|------|
 | `class`  | Classe principale (namespace = nom du dossier). |
 | `core`   | `true` = module non désactivable (Auth, Configuration, System). |
+| `category` | Catégorie de regroupement sur la page Modules (ex. « Système », « Communautaire », « e-commerce »). Défaut : « Système » si `core`, sinon « Autres ». |
 | `menu`   | Entrées de menu admin (voir ci-dessous). |
 
 Les modules **actifs** sont listés dans la table SQL `modules` (`active = 1`), chargés par ordre de `priority`.
@@ -190,6 +191,8 @@ class MonModule extends BaseModule
 
 État actif : `AdminMenuService::isActive($item, $currentPath)`. **Activer/désactiver un module ajoute/retire automatiquement ses entrées.**
 
+**Mega-menu (opt-in) :** en mode topbar, un item de menu déclaré avec **`"mega": true`** dans son `module.json` est rendu avec la classe `mega` → grille 3 colonnes (`repeat(3, minmax(180px,1fr))`, min 580px / max 92vw), repli 2 colonnes < 700px et repositionnement vers la gauche pour les items de fin de barre. En mode sidebar, le sous-menu déplié peut atteindre 900px de haut. **Aucun déclenchement automatique** (un menu à 7 entrées sans `mega` reste un menu déroulant classique). Exemple : module **Forum** (`"mega": true`, 14 sections).
+
 ---
 
 ## Thème d'administration
@@ -217,7 +220,8 @@ class MonModule extends BaseModule
 |---------|----------------|
 | **CSRF** | `CSRFProtection` + garde globale du Router (pool de tokens, `hash_equals`). |
 | **Rate limiting** | `RateLimiter` (table `rate_limits` / `rate_limit_blocks`). Login limité par **compte** et par **IP**. |
-| **Firewall applicatif** | `SecurityFirewall` + `SecurityFirewallService` (anti-flood, chemins/UA suspects, IP de confiance). |
+| **Firewall applicatif** | `SecurityFirewall` + `SecurityFirewallService` (anti-flood, chemins/UA suspects, IP de confiance, écriture des blocages). |
+| **Centre de sécurité** | `SecurityCenterService` (au-dessus du firewall) : catalogue de détecteurs catégorisés, score de menace par IP, blocage auto par seuils, listes blanche/noire, config. Page `/admin/security`. |
 | **En-têtes** | `SecurityHeaders` + `.htaccess` (CSP, X-Frame-Options, nosniff, Referrer-Policy). |
 | **Sessions** | `SessionManager` (cookies HttpOnly/Secure/SameSite, régénération). |
 | **XSS** | `XSSProtection::filterGlobals()` + échappement systématique en vue. |
@@ -227,13 +231,26 @@ class MonModule extends BaseModule
 
 Configuration centralisée : `framework/config/security.php`.
 
+### Centre de sécurité (`SecurityCenterService`)
+
+Couche d'analyse au-dessus du firewall. Méthode pivot : `recordEvent($ip, $ruleKey, $details, $meta)` qui journalise l'événement (`security_events`), cumule le **score** de l'IP (`security_threat_scores`) et déclenche le **blocage automatique** via le firewall si les seuils sont franchis.
+
+- **Détecteurs** (`security_rules`, 27 règles seedées depuis `SecurityCenterService::RULES`) : `category`, `label`, `severity`, `score`, `enabled` — éditables en admin.
+- **Catégories** : `web`, `scan`, `auth`, `upload`, `abuse`, `admin` (activables individuellement).
+- **Niveaux** : `levelFromScore()` → faible (0–25) / moyen (26–50) / élevé (51–75) / critique (76+).
+- **Seuils** (`security_settings`) : `block_threshold` (déf. 100 → blocage temporaire `block_duration_hours`, déf. 24 h), `ban_threshold` (déf. 300 → permanent), `auto_block`, `enabled`, `log_retention_days`.
+- **Listes** : `security_ip_whitelist` (jamais bloquée ; ajout = déblocage auto) ; liste noire = blocages permanents (`security_ip_blocks`).
+- Injecté dans le conteneur (`SecurityCenterService`), schéma auto-créé (idempotent) via `ensureSchema()`.
+
+**Détecteurs en pipeline** : le middleware `SecurityCenterDetector` (après `SecurityFirewall`) appelle `inspectHttpRequest()` qui scanne la **surface URL** (chemin + query + User-Agent, **pas les POST**) et lance `recordEvent()` pour chaque motif trouvé (XSS, SQLi, traversal, LFI/RFI, sondes git/env/backup/CMS, scanners, panels tiers, UA/motifs suspects). Les détecteurs d'**authentification** (`csrf_attack`, `brute_force`, `auth_flood`) sont signalés depuis `AuthController` via `$GLOBALS['securityCenterService']` (couplage souple). Les **uploads** sont inspectés dans le middleware sur `$_FILES` (`inspectUploadedFiles()` : webshells, doubles extensions, extensions exécutables). Le **détournement de session** (`session_hijacking`) est posé par `SessionManager` (drapeau global) puis relevé par le middleware. Le **rate-limit** du firewall alimente le score via `setDetectionSink()`. **24/27 détecteurs actifs** ; non déclenchés : `clickjacking` (en-tête `X-Frame-Options`), `account_enumeration`, `invalid_session` (conservés au catalogue, administrables).
+
 > **Mode debug** : le réglage admin `debug_mode` (Configuration → Système) est l'interrupteur maître — activé, il force l'affichage des erreurs + la debug bar, quel que soit `APP_ENV`.
 
 ---
 
 ## Services & helpers
 
-**Services** (`framework/Services/`) : `Router`, `Database` (PDO + query log), `Logger`, `AdminMenuService`, `CacheService`, `DebugBar`, `AuthTracker`, `DeviceDetector`, `GeolocService`, `RecaptchaService`, `SecurityFirewallService`.
+**Services** (`framework/Services/`) : `Router`, `Database` (PDO + query log), `Logger`, `AdminMenuService`, `CacheService`, `DebugBar`, `AuthTracker`, `DeviceDetector`, `GeolocService`, `RecaptchaService`, `SecurityFirewallService`, `SecurityCenterService`, `ImageOptimizer` (redimensionnement/compression GD, sûr : ignore SVG/ICO/GIF, n'écrase que si plus léger).
 
 **Helpers globaux** (définis dans bootstrap) :
 
@@ -263,18 +280,37 @@ Tant que le dossier `install/` existe, un **bandeau discret** s'affiche en haut 
 
 ## Créer un module
 
+**Le plus simple : le générateur.** `/admin/modules/generate` (bouton « 🪄 Générer un module » sur la page Modules) crée un squelette complet et activable (manifeste + menu, classe, routes, contrôleur dashboard+sections, service, `database/install.sql`+`uninstall.sql`+`migrations/`, changelog, vues `.ui-*`).
+
+**À la main :**
 1. Créer `modules/MonModule/` avec `module.json` + `MonModule.php`.
 2. Déclarer routes dans `routes.php` (closure recevant `$router`).
-3. Déclarer le menu dans `module.json` (clé `menu`).
+3. Déclarer le menu dans `module.json` (clé `menu`) et la `category`.
 4. Placer les vues dans `Views/` et utiliser `admin_header()` / `admin_footer()`.
-5. Insérer le module dans la table `modules` (`active = 1`) — ou via le futur gestionnaire d'installation.
+5. Fournir `database/install.sql` (+ `uninstall.sql`), puis activer via la page **Modules** (activation atomique + vérification des tables).
+
+**Distribution :** un module se livre en **ZIP** (contenant le dossier du module avec son `module.json`) ; il s'installe via **page Modules → « ⬆️ Installer (.zip) »** (extraction sécurisée), puis activation.
 
 Le contrôleur est auto-instancié par le Router (DI). Pour des dépendances spécifiques, ajoutez-les à `setDependencies()` dans `index.php`.
 
 ### Installation / désinstallation
 
-- Placez le schéma dans `modules/<Nom>/database/install.sql` (et `uninstall.sql`).
-- À l'**activation** (page Modules ou `ModuleManager::activateModule`), `install.sql` est exécuté puis le hook PHP `install()` ; à la **désactivation**, `uninstall()` puis `uninstall.sql`.
+- **Deux conventions de schéma** (gérées par `ModuleManager::runModuleSchema()`) :
+  1. `modules/<Nom>/database/install.sql` (+ `uninstall.sql`) — fichier unique ;
+  2. `modules/<Nom>/schema.sql` + `schema_*.sql` (racine du module) — exécutés dans l'ordre alphabétique, **chacun dans son propre try/catch** (une migration déjà appliquée n'interrompt pas l'installation, simple avertissement loggé). Convention utilisée par le module **Forum** (26 tables).
+- À l'**activation** (page Modules ou `ModuleManager::activateModule`), le schéma est exécuté puis le hook PHP `install()` ; à la **désactivation**, `uninstall()` puis `database/uninstall.sql` s'il existe.
+- ⚠️ **Sans `uninstall.sql`, la désactivation est non destructive** : les tables du module sont conservées (cas du Forum). Pour purger les données, fournir un `uninstall.sql`.
+- **Activation atomique** : `activateModule()` exécute le schéma, **vérifie que toutes les tables `CREATE TABLE` existent**, puis appelle `install()`. En cas d'échec, le module n'est **pas** activé, les tables partielles sont nettoyées (`uninstall.sql`) et l'erreur est disponible via `getLastError()` (affichée dans la page Modules). Garantit qu'on n'a jamais un module actif (menu visible) sans ses tables.
+
+### Migrations (`database/migrations/*.sql`)
+
+- `install.sql` = **baseline** (schéma complet à jour pour une install fraîche). `database/migrations/NNN_xxx.sql` = étapes **incrémentales** pour faire évoluer un module déjà installé.
+- Suivi dans la table `module_migrations`. À l'activation, les migrations présentes sont marquées appliquées (baseline). `ModuleManager::updateModule($name)` rejoue les migrations en attente et synchronise la version. `pendingMigrationCount($name)` indique s'il y a des migrations à appliquer.
+- Convention de nommage : préfixe ordonnable, ex. `2026_05_31_001_add_column.sql`.
+
+### Exécution SQL (dumps complexes)
+
+`ModuleManager` exécute les scripts SQL (`install.sql`, `uninstall.sql`, migrations) **statement par statement** : prise en charge de la directive **`DELIMITER`** (triggers / procédures stockées à corps `BEGIN…END`) et désactivation de **`FOREIGN_KEY_CHECKS`** le temps du script (CREATE TABLE avec clés étrangères « en avant », typiques des dumps phpMyAdmin / mysqldump). Un module peut donc fournir un dump SQL complet (tables + vues + triggers + données) comme `database/install.sql`.
 - Le module apparaît dans la page **Modules** dès que son `module.json` est présent (découverte), et peut être activé/désactivé d'un clic (sauf modules `core`).
 
 ---
