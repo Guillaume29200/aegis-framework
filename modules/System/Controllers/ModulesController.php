@@ -6,6 +6,7 @@ namespace System\Controllers;
 use Framework\Services\Database;
 use Framework\Security\CSRFProtection;
 use Framework\ModuleManager\ModuleManager;
+use System\Services\ModuleInstallerService;
 
 /**
  * ModulesController - Gestion des modules système
@@ -37,6 +38,14 @@ class ModulesController
         foreach ($availableModules as $moduleName => $config) {
             $isActive = isset($modulesStatus[$moduleName]) && $modulesStatus[$moduleName]['active'] === 1;
             $isLoaded = isset($loadedModules[$moduleName]);
+            $isProtected = $this->isProtectedModule($moduleName);
+
+            // Catégorie : champ "category" du module.json ; sinon « Système » pour
+            // les modules cœur, « Autres » par défaut.
+            $category = trim((string)($config['category'] ?? ''));
+            if ($category === '') {
+                $category = $isProtected ? 'Système' : 'Autres';
+            }
 
             $modules[] = [
                 'name' => $moduleName,
@@ -47,13 +56,27 @@ class ModulesController
                 'enabled' => $config['enabled'] ?? true,
                 'active' => $isActive,
                 'loaded' => $isLoaded,
+                'category' => $category,
                 'dependencies' => $config['dependencies'] ?? [],
                 'has_admin_menu' => isset($config['menu']) || isset($config['admin_menu']),
                 'icon_path' => $this->getModuleIconPath($moduleName),
                 'has_routes' => $config['routes'] ?? false,
-                'is_protected' => $this->isProtectedModule($moduleName),
+                'is_protected' => $isProtected,
             ];
         }
+
+        // Regroupement par catégorie (cœur/Système en premier).
+        $categories = [];
+        foreach ($modules as $m) {
+            $categories[$m['category']][] = $m;
+        }
+        uksort($categories, function ($a, $b) {
+            if ($a === 'Système') return -1;
+            if ($b === 'Système') return 1;
+            if ($a === 'Autres') return 1;
+            if ($b === 'Autres') return -1;
+            return strcasecmp($a, $b);
+        });
 
         $stats = [
             'total' => count($modules),
@@ -65,6 +88,63 @@ class ModulesController
         $csrfToken = $this->csrf->generateToken();
 
         require __DIR__ . '/../Views/admin/modules/index.php';
+    }
+
+    /**
+     * Supprimer définitivement un module (dossier + tables). Refuse les modules cœur.
+     */
+    public function delete(): void
+    {
+        header('Content-Type: application/json');
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false, 'message' => 'Méthode non autorisée']);
+            exit;
+        }
+        if (!$this->csrf->validateToken($_POST['csrf_token'] ?? '')) {
+            echo json_encode(['success' => false, 'message' => 'Token CSRF invalide']);
+            exit;
+        }
+
+        $moduleName = (string)($_POST['module'] ?? '');
+        if ($moduleName === '' || !preg_match('/^[A-Za-z0-9_]+$/', $moduleName)) {
+            echo json_encode(['success' => false, 'message' => 'Module non spécifié.']);
+            exit;
+        }
+        if ($this->isProtectedModule($moduleName)) {
+            echo json_encode(['success' => false, 'message' => 'Ce module est un module cœur et ne peut pas être supprimé.']);
+            exit;
+        }
+
+        $ok = $this->moduleManager->deleteModule($moduleName);
+        echo json_encode([
+            'success' => $ok,
+            'message' => $ok
+                ? "Module « {$moduleName} » supprimé (dossier et tables)."
+                : 'Échec de la suppression : ' . ($this->moduleManager->getLastError() ?? 'inconnue'),
+        ]);
+        exit;
+    }
+
+    /**
+     * Installer un module depuis une archive ZIP uploadée.
+     */
+    public function upload(): void
+    {
+        if (empty($_SESSION['logged_in']) || !in_array($_SESSION['role'] ?? '', ['admin', 'superadmin'], true)) {
+            redirect('/auth/login');
+        }
+        try {
+            $this->csrf->validateToken($_POST['csrf_token'] ?? '');
+        } catch (\Throwable $e) {
+            $_SESSION['error'] = 'Token CSRF invalide.';
+            redirect('/admin/modules');
+        }
+
+        $service = new ModuleInstallerService();
+        $result = $service->installFromUpload($_FILES['module_zip'] ?? []);
+        $_SESSION[$result['success'] ? 'success' : 'error'] = ($result['success'] ? '✅ ' : '❌ ') . $result['message'];
+        redirect('/admin/modules');
     }
 
     /**
@@ -108,10 +188,14 @@ class ModulesController
         try {
             if ($action === 'activate') {
                 $result = $this->moduleManager->activateModule($moduleName);
-                $message = $result ? 'Module activé avec succès' : "Erreur lors de l'activation";
+                $err = $this->moduleManager->getLastError();
+                $message = $result
+                    ? 'Module activé avec succès'
+                    : ("Installation bloquée : " . ($err ?: "erreur inconnue") . " — le module n'a pas été activé.");
             } else {
                 $result = $this->moduleManager->deactivateModule($moduleName);
-                $message = $result ? 'Module désactivé avec succès' : 'Erreur lors de la désactivation';
+                $err = $this->moduleManager->getLastError();
+                $message = $result ? 'Module désactivé avec succès' : ('Erreur lors de la désactivation : ' . ($err ?: 'inconnue'));
             }
 
             echo json_encode(['success' => $result, 'message' => $message]);
@@ -153,7 +237,8 @@ class ModulesController
         $changelogFile = $modulePath . '/changelog.json';
         $changelog = [];
         if (file_exists($changelogFile)) {
-            $changelog = json_decode(file_get_contents($changelogFile), true) ?? [];
+            $raw = json_decode(file_get_contents($changelogFile), true) ?? [];
+            $changelog = $this->normalizeChangelog($raw);
         }
 
         echo json_encode([
@@ -170,6 +255,33 @@ class ModulesController
         ]);
 
         exit;
+    }
+
+    /**
+     * Normalise un changelog vers une liste [{version,date,changes[]}], quel que
+     * soit le format source : liste, {"versions":[...]}, ou {"1.2.0":{...}}.
+     */
+    private function normalizeChangelog($raw): array
+    {
+        if (!is_array($raw) || empty($raw)) {
+            return [];
+        }
+        // Format { "versions": [...] }
+        if (isset($raw['versions']) && is_array($raw['versions'])) {
+            return array_values($raw['versions']);
+        }
+        // Format liste [ {version, ...}, ... ]
+        if (array_is_list($raw)) {
+            return $raw;
+        }
+        // Format objet indexé par version { "1.2.0": {date,changes}, ... }
+        $out = [];
+        foreach ($raw as $version => $entry) {
+            if (is_array($entry)) {
+                $out[] = ['version' => (string)$version] + $entry;
+            }
+        }
+        return $out;
     }
 
     /**

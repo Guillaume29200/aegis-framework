@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace System\Services;
 
 /**
- * Service de monitoring général pour eSport-CMS V4.
+ * Service de monitoring général pour Aegis Framework V4.
  * Centralise les informations utiles pour superviser un hébergement web :
  * système/PHP, base de données, stockage, sécurité, logs et modules.
  */

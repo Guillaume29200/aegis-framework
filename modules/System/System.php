@@ -32,7 +32,7 @@ class System extends BaseModule
 
     public function getAuthor(): string
     {
-        return 'eSport-CMS';
+        return 'Aegis Framework';
     }
 
     public function init(): void

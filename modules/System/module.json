@@ -5,6 +5,7 @@
     "author": "Lavelia Studio",
     "class": "System\\System",
     "core": true,
+    "category": "Système",
     "dependencies": [],
     "menu": []
 }

@@ -1,6 +1,6 @@
 <?php
 /**
- * Contrôleur Monitoring V2 - eSport-CMS V4
+ * Contrôleur Monitoring V2 - Aegis Framework V4
  * VERSION ULTRA COMPLÃˆTE
  */
 

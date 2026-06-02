@@ -1,9 +1,9 @@
 <?php
 /**
- * Vue Monitoring — eSport-CMS V4 (UI maison, sans dépendance externe)
+ * Vue Monitoring — Aegis Framework V4 (UI maison, sans dépendance externe)
  * Supervision : santé, système/PHP, base de données, stockage, sécurité, logs, modules.
  */
-if (!defined('ESPORT_CMS')) die('Access denied');
+if (!defined('AEGIS_FRAMEWORK')) die('Access denied');
 
 $pageTitle = $pageTitle ?? 'Monitoring';
 admin_header($pageTitle);
