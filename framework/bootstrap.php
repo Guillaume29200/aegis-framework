@@ -8,7 +8,7 @@ declare(strict_types=1);
  * Chargé par index.php (web) et les scripts CRON (CLI).
  * 
  * @author Guillaume
- * @version 4.0.0
+ * @version 4.0.0-alpha.10
  */
 
 // ============================================
@@ -88,6 +88,23 @@ function base_uri(): string {
 function redirect(string $path): never {
     header('Location: ' . url($path));
     exit;
+}
+
+/**
+ * Un module est-il actif (chargé) ? Sert à masquer les liens vers des modules
+ * non installés/désactivés (ex. menu membre). Insensible à la casse.
+ */
+function module_active(string $name): bool {
+    $mm = $GLOBALS['moduleManager'] ?? null;
+    if ($mm === null || !method_exists($mm, 'getLoadedModules')) {
+        return false;
+    }
+    foreach (array_keys($mm->getLoadedModules()) as $loaded) {
+        if (strcasecmp((string)$loaded, $name) === 0) {
+            return true;
+        }
+    }
+    return false;
 }
 
 // ============================================
@@ -345,12 +362,48 @@ if (!IS_CLI) {
 }
 
 // ─────────────────────────────────────────
+// Réglages de session pilotés depuis l'admin (Configuration → Sessions).
+// Surcharge la config par défaut de security.php si présent en base.
+// ─────────────────────────────────────────
+if (!IS_CLI) {
+    try {
+        $rows = $db->getPDO()->query(
+            "SELECT param_key, param_value FROM settings WHERE param_key IN (
+                'session_idle_minutes','session_regenerate_minutes','session_ip_binding',
+                'session_idle_logout','session_warn_seconds','session_remember_enabled','session_remember_days'
+            )"
+        )->fetchAll(\PDO::FETCH_KEY_PAIR);
+
+        if (!empty($rows['session_idle_minutes'])) {
+            $securityConfig['session']['gc_maxlifetime'] = max(1, (int)$rows['session_idle_minutes']) * 60;
+        }
+        if (!empty($rows['session_regenerate_minutes'])) {
+            $securityConfig['session']['regenerate_interval'] = max(1, (int)$rows['session_regenerate_minutes']) * 60;
+        }
+        if (!empty($rows['session_ip_binding']) && in_array($rows['session_ip_binding'], ['off','subnet','strict'], true)) {
+            $securityConfig['session']['ip_binding'] = $rows['session_ip_binding'];
+        }
+        // Exposé aux vues (front : modal d'inactivité) — valeurs effectives.
+        $GLOBALS['session_ui'] = [
+            'idle_logout'      => isset($rows['session_idle_logout']) ? (bool)(int)$rows['session_idle_logout'] : true,
+            'idle_seconds'     => (int)($securityConfig['session']['gc_maxlifetime']),
+            'warn_seconds'     => isset($rows['session_warn_seconds']) ? max(10, (int)$rows['session_warn_seconds']) : 60,
+            'remember_enabled' => isset($rows['session_remember_enabled']) ? (bool)(int)$rows['session_remember_enabled'] : true,
+            'remember_days'    => isset($rows['session_remember_days']) ? max(1, (int)$rows['session_remember_days']) : 30,
+        ];
+    } catch (\Throwable $e) {
+        // Table/colonnes absentes → on garde les défauts de security.php.
+    }
+}
+
+// ─────────────────────────────────────────
 // Security Services
 // ─────────────────────────────────────────
 $sessionManager = new SessionManager($securityConfig);
 if (!IS_CLI) {
     $sessionManager->start();
 }
+$GLOBALS['sessionManager'] = $sessionManager;
 
 $csrfProtection = new CSRFProtection($securityConfig);
 $xssProtection = new XSSProtection($securityConfig);

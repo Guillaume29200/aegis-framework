@@ -143,8 +143,8 @@ if (!function_exists('adm_render_topnav_item')) {
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- UI maison (aucune dépendance externe) -->
-    <link href="<?= u('/framework/assets/css/admin/ui.css') ?>" rel="stylesheet">
-    <link href="<?= u('/framework/assets/css/admin/compat.css') ?>" rel="stylesheet">
+    <link href="<?= u('/framework/assets/css/admin/ui.css') ?>?v=<?= @filemtime(ROOT_PATH . '/framework/assets/css/admin/ui.css') ?: '1' ?>" rel="stylesheet">
+    <link href="<?= u('/framework/assets/css/admin/compat.css') ?>?v=<?= @filemtime(ROOT_PATH . '/framework/assets/css/admin/compat.css') ?: '1' ?>" rel="stylesheet">
 </head>
 <body>
 <?php if (is_dir(ROOT_PATH . '/install')): ?>
@@ -166,6 +166,36 @@ try {
 if ($admMaintenanceOn): ?>
 <div class="adm-maint-warn" id="adm-maint-warn">
     <span>🚧 Le <strong>mode maintenance</strong> est activé — le site est inaccessible au public. <a href="<?= u('/admin/configuration') ?>">Désactiver</a></span>
+</div>
+<?php endif; ?>
+<?php
+// ── Bandeau diagnostic : nombre d'erreurs détectées par le DiagnosticService ──
+// Le résultat est mis en cache en session 5 min (le diagnostic effectue plusieurs
+// requêtes ; inutile de le rejouer à chaque page admin). La page /admin/diagnostic
+// invalide ce cache pour refléter immédiatement l'état après une réparation.
+$admDiagErrors = 0;
+try {
+    $admNow = time();
+    $admCache = $_SESSION['adm_diag_cache'] ?? null;
+    if (!is_array($admCache) || ($admCache['t'] ?? 0) < $admNow - 300) {
+        $admDb2 = $GLOBALS['db'] ?? null;
+        $admMm  = $GLOBALS['moduleManager'] ?? null;
+        if ($admDb2 && $admMm && class_exists('\\System\\Services\\DiagnosticService')) {
+            $admSvc    = new \System\Services\DiagnosticService($admDb2, $admMm);
+            $admSummary = $admSvc->summary($admSvc->run());
+            $admDiagErrors = (int) ($admSummary['error'] ?? 0);
+        }
+        $_SESSION['adm_diag_cache'] = ['t' => $admNow, 'errors' => $admDiagErrors];
+    } else {
+        $admDiagErrors = (int) ($admCache['errors'] ?? 0);
+    }
+} catch (\Throwable $e) {
+    $admDiagErrors = 0;
+}
+if ($admDiagErrors > 0): ?>
+<div class="adm-diag-warn" id="adm-diag-warn">
+    <span>⛔ Le framework a détecté <strong><?= $admDiagErrors ?> erreur<?= $admDiagErrors > 1 ? 's' : '' ?></strong> — vérifiez-les sans tarder.</span>
+    <a class="adm-diag-link" href="<?= u('/admin/diagnostic') ?>">Ouvrir le diagnostic →</a>
 </div>
 <?php endif; ?>
 <div class="adm">

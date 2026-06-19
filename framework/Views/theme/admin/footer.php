@@ -63,11 +63,11 @@
 </aside>
 
 <!-- Scripts (vanilla, aucune dépendance externe) -->
-<script src="<?= u('/framework/assets/js/admin/ui.js') ?>"></script>
+<script src="<?= u('/framework/assets/js/admin/ui.js') ?>?v=<?= @filemtime(ROOT_PATH . '/framework/assets/js/admin/ui.js') ?: '1' ?>"></script>
 
 <?php // TurboNav — navigation AJAX (accélère le CMS). Activable via Configuration. ?>
 <script>window.TURBONAV = { enabled: <?= (defined('TURBONAV_ENABLED') && TURBONAV_ENABLED) ? 'true' : 'false' ?> };</script>
-<script src="<?= u('/framework/assets/js/turbo-nav.js') ?>"></script>
+<script src="<?= u('/framework/assets/js/turbo-nav.js') ?>?v=<?= @filemtime(ROOT_PATH . '/framework/assets/js/turbo-nav.js') ?: '1' ?>"></script>
 
 <?php
 $cookieBanner = ROOT_PATH . '/framework/Views/theme/public/cookie-banner.php';
@@ -81,5 +81,69 @@ if (file_exists($cookieBanner)) require $cookieBanner;
 $__gnpIpWidget = ROOT_PATH . '/modules/GameNodePanel/AILogGuard/ODIN/Views/admin/odin/protect_ip_widget.php';
 if (is_file($__gnpIpWidget)) require $__gnpIpWidget;
 ?>
+
+<?php
+// ── Déconnexion auto sur inactivité (configurable : Configuration → Sessions) ──
+$__su = $GLOBALS['session_ui'] ?? null;
+if (!empty($_SESSION['user_id']) && is_array($__su) && !empty($__su['idle_logout'])):
+?>
+<div id="aegis-idle-modal" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="aim-box">
+    <div class="aim-icon">⏲️</div>
+    <h3 class="aim-title">Toujours là ?</h3>
+    <p class="aim-text">Par sécurité, vous serez déconnecté pour inactivité dans <strong id="aim-count">60</strong> s.</p>
+    <div class="aim-actions">
+      <a href="<?= u('/auth/logout') ?>" class="ui-btn">Se déconnecter</a>
+      <button type="button" class="ui-btn primary" id="aim-stay">Rester connecté</button>
+    </div>
+  </div>
+</div>
+<style>
+#aegis-idle-modal{position:fixed;inset:0;z-index:9000;display:none;align-items:center;justify-content:center;background:rgba(8,10,20,.6);backdrop-filter:blur(3px)}
+#aegis-idle-modal.show{display:flex}
+#aegis-idle-modal .aim-box{background:var(--surface,#fff);border:1px solid var(--border,#e4e9f2);border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,.35);max-width:380px;width:calc(100% - 32px);padding:26px;text-align:center}
+#aegis-idle-modal .aim-icon{font-size:2.2rem}
+#aegis-idle-modal .aim-title{margin:.4rem 0 .3rem;font-size:1.2rem;font-weight:800;color:var(--text,#1f2330)}
+#aegis-idle-modal .aim-text{color:var(--text-soft,#64748b);font-size:.92rem;margin:0 0 18px}
+#aegis-idle-modal .aim-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+</style>
+<script>
+(function () {
+    'use strict';
+    var IDLE = <?= (int)$__su['idle_seconds'] ?>;          // secondes avant déconnexion
+    var WARN = <?= (int)$__su['warn_seconds'] ?>;          // début de l'avertissement
+    var PING = <?= json_encode(u('/auth/session/ping')) ?>;
+    var LOGOUT = <?= json_encode(u('/auth/logout') . '?session_expired=1') ?>;
+    if (IDLE <= 0) return;
+    if (WARN >= IDLE) WARN = Math.max(10, Math.floor(IDLE / 2));
+
+    var last = Date.now(), modal = document.getElementById('aegis-idle-modal'),
+        countEl = document.getElementById('aim-count'), shown = false, dead = false;
+
+    function reset() { last = Date.now(); if (shown) { shown = false; modal.classList.remove('show'); modal.setAttribute('aria-hidden', 'true'); } }
+
+    ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'click'].forEach(function (ev) {
+        window.addEventListener(ev, function () { if (!shown && !dead) reset(); }, { passive: true });
+    });
+
+    document.getElementById('aim-stay').addEventListener('click', function () {
+        fetch(PING, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
+            .then(function (r) { if (r.status === 401) { window.location.href = LOGOUT; return null; } return r.json(); })
+            .then(function () { reset(); })
+            .catch(function () { reset(); });
+    });
+
+    setInterval(function () {
+        if (dead) return;
+        var remaining = IDLE - Math.floor((Date.now() - last) / 1000);
+        if (remaining <= 0) { dead = true; window.location.href = LOGOUT; return; }
+        if (remaining <= WARN) {
+            if (!shown) { shown = true; modal.classList.add('show'); modal.setAttribute('aria-hidden', 'false'); }
+            countEl.textContent = remaining;
+        }
+    }, 1000);
+})();
+</script>
+<?php endif; ?>
 </body>
 </html>

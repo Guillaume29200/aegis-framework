@@ -1,0 +1,997 @@
+{
+    "product": "Aegis Framework",
+    "version": "4.0.0-alpha.10",
+    "generated": "2026-06-16",
+    "releases": [
+        {
+            "label": "[Non publié] — 2026-06-14 — Sessions robustes & configurables + InnoDB forcé",
+            "date": "2026-06-14",
+            "title": "Sessions robustes & configurables + InnoDB forcé",
+            "groups": [
+                {
+                    "title": "🔐 Sessions — fin des déconnexions aléatoires + pilotage par configuration",
+                    "items": [
+                        {
+                            "text": "**Cause corrigée** : l'empreinte de session (`SessionManager::generateFingerprint()`) incluait l'IP cliente, et en local `localhost` alterne entre **IPv4 `127.0.0.1`** et **IPv6 `::1`** → l'empreinte « changeait » → déconnexion « hijacking » aléatoire. Les deux adresses de bouclage sont désormais **normalisées comme équivalentes**.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Liaison IP configurable** (`ip_binding`) : `off` (aucune vérif d'IP), `subnet` (tolère un changement dans le même sous-réseau /24 — défaut), `strict` (IP exacte, comportement historique).",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Réglages pilotés depuis la base** : `bootstrap.php` lit les clés `settings` (`session_idle_minutes`, `session_regenerate_minutes`, `session_ip_binding`…) et **surcharge** `securityConfig['session']` (`gc_maxlifetime`, `regenerate_interval`, `ip_binding`) avant la construction du `SessionManager`. Repli transparent sur les défauts de `framework/config/security.php` si la base n'a rien.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Délai d'inactivité** désormais exprimé en minutes côté admin, et exposé au front (compte à rebours).",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Front (thème admin)** : modale d'**avertissement avant déconnexion** par inactivité + **keep-alive** (ping `/auth/session/ping`) sur action « Rester connecté ».",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Seeds** : valeurs par défaut des réglages de session ajoutées à `install/seed.sql` (idempotent, `INSERT IGNORE`).",
+                            "sub": false
+                        }
+                    ]
+                },
+                {
+                    "title": "🗄️ InnoDB forcé sur la connexion (`Database`)",
+                    "items": [
+                        {
+                            "text": "`Database::connect()` exécute désormais `SET SESSION default_storage_engine = 'InnoDB'`. Sur les serveurs où `@@default_storage_engine = MyISAM` (cas fréquent sous WAMP), toute table créée par l'application — ou importée sans moteur explicite — restait en MyISAM, **brisant les clés étrangères InnoDB** (échec silencieux des `INSERT` enfants). Toutes les tables créées par Aegis sont maintenant garanties InnoDB.",
+                            "sub": false
+                        }
+                    ]
+                },
+                {
+                    "title": "🧩 Helper `module_active()` + garde de licence non bloquante",
+                    "items": [
+                        {
+                            "text": "Nouveau helper global **`module_active(string $name): bool`** (`bootstrap.php`) : indique si un module est **chargé** (installé **et** actif). Sert à masquer proprement les liens vers des modules désactivés (ex. menu membre).",
+                            "sub": false
+                        },
+                        {
+                            "text": "Nouveau service framework **`Framework\\Services\\LicenseGuard`** : pont entre un module et un éventuel système de licence, **conçu pour ne jamais bloquer** (cache, tolérance hors-ligne, période d'essai, fail-open ; mode « ouvert » = aucun appel réseau). Si aucun système de licence n'est installé, tout passe en accès libre.",
+                            "sub": false
+                        }
+                    ]
+                },
+                {
+                    "title": "🛡️ Exemption CSRF — API de validation de licence",
+                    "items": [
+                        {
+                            "text": "`framework/config/security.php` : ajout de `/api/license/validate` à la liste `csrf.except` (endpoint public appelé par des sites tiers, authentifié par clé + signature HMAC — pas par jeton CSRF de session).",
+                            "sub": false
+                        }
+                    ]
+                }
+            ],
+            "version": "4.0.0-alpha.10",
+            "types": [
+                "fix",
+                "feature"
+            ]
+        },
+        {
+            "label": "[Non publié] — 2026-06-06 — Menus : greffe inter-modules + Tickets alloué à GNP",
+            "date": "2026-06-06",
+            "title": "Menus : greffe inter-modules + Tickets alloué à GNP",
+            "groups": [
+                {
+                    "title": "🧩 Fusion de menus par label (`AdminMenuService`)",
+                    "items": [
+                        {
+                            "text": "`AdminMenuService::build()` **fusionne désormais les items de même `label`** (insensible à la casse/aux espaces) : leurs `children` sont réunis sous un seul item (fusion **récursive** des sous-groupes), les autres propriétés (icône, position, `mega`) venant de la première occurrence.",
+                            "sub": false
+                        },
+                        {
+                            "text": "Permet à un module de **greffer ses entrées dans le groupe d'un autre** sans le modifier, tout en gardant la maîtrise de leur visibilité (l'entrée disparaît si **son** module est désactivé). Idéal pour les **add-ons** (notamment payants) qui se logent dans un module hôte.",
+                            "sub": false
+                        },
+                        {
+                            "text": "Documenté dans `FRAMEWORK.md` (Menu d'administration) et la doc publique (`doc-theme.php` → « Greffer dans le menu d'un autre module »).",
+                            "sub": false
+                        }
+                    ]
+                },
+                {
+                    "title": "🎫 Module Tickets alloué à GameNodePanel",
+                    "items": [
+                        {
+                            "text": "Entrée de menu **greffée dans le méga-menu GNP** (groupe « Support → Tickets ») via la fusion par label ; plus d'entrée de premier niveau. Clé `category: \"Game Node Panel\"` pour le regroupement sur la page Modules.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Corrections** : tables `gsh_*` → `gnp_*` (jointures cassées par le renommage), création effective des tables (`support_tickets`/`support_ticket_messages`, type FK `game_server_id` aligné sur `gnp_game_servers.id`), constant `ESPORT_CMS` → `AEGIS_FRAMEWORK`, header admin obsolète → helpers `admin_header()/admin_footer()`.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Sécurité** : audit OK (auth, CSRF sur tous les POST, IDOR via `getByIdForUser`/`userOwnsGameServer`, requêtes préparées, XSS échappé) + **anti-spam** (quota de tickets ouverts, délai mini entre créations/réponses).",
+                            "sub": false
+                        }
+                    ]
+                },
+                {
+                    "title": "🛡️ Forum",
+                    "items": [
+                        {
+                            "text": "Audit confirmé (CSRF complet, `.htaccess` uploads, `afPost` auto-CSRF). Migration progressive des vues admin `.af-*` → `.ui-*` natif (en cours, manuelle, vue par vue).",
+                            "sub": false
+                        }
+                    ]
+                }
+            ],
+            "version": "4.0.0-alpha.9",
+            "types": [
+                "feature"
+            ]
+        },
+        {
+            "label": "[Non publié] — 2026-06-04 — Installeur : redirection auto + durcissement sécurité",
+            "date": "2026-06-04",
+            "title": "Installeur : redirection auto + durcissement sécurité",
+            "groups": [
+                {
+                    "title": "🚀 Redirection automatique vers l'installeur",
+                    "items": [
+                        {
+                            "text": "Le front controller (`index.php`) **redirige vers `/install/`** si le framework n'est pas installé, **avant** le chargement du bootstrap (qui échouerait sans `.env`/BDD). Ne s'applique pas en CLI.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Détection robuste + double sécurité** (fix faux positif de redirection sur une install existante sans `installed.lock`) : considéré installé si `install/installed.lock` **OU** `.env` présent **OU** la config `framework/config/database.php` pointe vers une base réellement accessible **contenant la table cœur `users`**. Si l'install est détectée valide mais sans marqueur, `installed.lock` est créé automatiquement (best-effort) pour éviter de refaire la vérification BDD à chaque requête.",
+                            "sub": false
+                        }
+                    ]
+                },
+                {
+                    "title": "🔒 Audit de sécurité du module d'installation (`/install`)",
+                    "items": [
+                        {
+                            "text": "**Contrôleur global sécurisé** `install/InstallController.php` : centralise toutes les actions AJAX (test-db / save-admin / run). Verrou « déjà installé » + **vérification CSRF systématique** + validation des entrées en un seul point. `install/index.php` ne fait plus que déléguer.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**CSRF** : jeton de session généré et exposé en JS ; transmis sur chaque appel (`csrf` POST/GET ou header `X-CSRF-Token`), vérifié en `hash_equals`. Jeton + secrets de session purgés à la finalisation.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Mot de passe admin plus jamais en clair en session** : haché en **Argon2id** dès l'étape « Administrateur » ; seul le hash transite jusqu'à la création du compte (`createAdmin` utilise le hash pré-calculé). Validation renforcée du nom d'utilisateur.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**`.env` sécurisé** : valeurs échappées avant écriture (lues par `parse_ini_file`). **Suppression des CR/LF/NUL** → empêche l'injection de variables d'environnement via le mot de passe ; échappement backslash/guillemet (round-trip `parse_ini_file` vérifié). Écriture `LOCK_EX` + `chmod 0640`.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Import SQL robuste** : remplacement de l'`exec()` massif par un **découpage en instructions** (gère les `;` dans chaînes et commentaires `-- `/`#`/`/* */`, échappement antislash) exécutées une à une, avec **rapport d'erreur précis** (numéro d'instruction + extrait) pour `schema.sql` et `seed.sql`.",
+                            "sub": false
+                        }
+                    ]
+                }
+            ],
+            "version": "4.0.0-alpha.8",
+            "types": [
+                "security",
+                "feature"
+            ]
+        },
+        {
+            "label": "[Non publié] — 2026-05-30 (suite 5)",
+            "date": "2026-05-30",
+            "title": "Générateur de module, installeur ZIP, diagnostic & migrations",
+            "groups": [
+                {
+                    "title": "🧹 Nettoyage de tables héritées inutilisées",
+                    "items": [
+                        {
+                            "text": "Suppression des tables héritées inutilisées **`module_settings`**, **`user_permissions`**, **`user_premium_access`** et **`user_activities`** des fichiers d'installation (`install/schema.sql` ; `user_permissions` aussi dans `modules/Auth/schema.sql`) — vestiges d'anciens développements, aucune donnée ni usage. La méthode morte **`Logger::logActivity()`** (seul écrivain de `user_activities`, jamais appelée) a également été retirée pour rester cohérent.",
+                            "sub": false
+                        }
+                    ]
+                },
+                {
+                    "title": "🚧 Bandeau « mode maintenance actif »",
+                    "items": [
+                        {
+                            "text": "Quand le **mode maintenance** est activé, un **bandeau rouge** s'affiche en haut de l'administration, **sous** le bandeau du dossier `/install` (couleur différente pour les distinguer), avec un lien direct vers Configuration pour le désactiver. Lecture directe du réglage `maintenance_mode` dans le shell admin.",
+                            "sub": false
+                        }
+                    ]
+                },
+                {
+                    "title": "🗺️ Sitemap & robots.txt + optimisation des images",
+                    "items": [
+                        {
+                            "text": "**Génération sitemap.xml / robots.txt** : nouvelle carte sur la page **SEO & médias** (`/admin/configuration/seo`). Service dédié `SitemapService` + contrôleur `SitemapController` (route `POST /admin/configuration/sitemap/generate`). Le sitemap inclut l'accueil et, si le module Forum est actif, le forum, ses catégories/sujets visibles (invités) et ses pages publiques. `robots.txt` référence le sitemap et bloque `/admin`, `/install`, `/framework`, `/auth` (ou tout le site si `seo_robots` = noindex). Si le fichier existe déjà, la carte affiche **la date de génération + nombre d'URL** avec un bouton **« Mettre à jour / régénérer »** et un lien « Voir le sitemap ».",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Optimisation des images à l'upload** : nouveau service framework `ImageOptimizer` (GD) — redimensionne (largeur max) et recompresse les images bitmap (JPG/PNG/WebP), en n'écrasant l'original que si le résultat est plus léger ; **ignore SVG/ICO/GIF**. Branché sur les uploads SEO (logo/OG) et Configuration (logo/couverture). **Administrable** dans Configuration → Système : interrupteur « Optimiser les images uploadées » + largeur max (déf. 1920 px) + qualité (déf. 82). Test : JPEG 3000 px / 48 Ko → 1920 px / 19 Ko.",
+                            "sub": false
+                        }
+                    ]
+                },
+                {
+                    "title": "🧭 TurboNav — état actif du menu resynchronisé",
+                    "items": [
+                        {
+                            "text": "Après une navigation AJAX, le menu (sidebar + topnav) conservait l'item actif de la **page précédente** (ex. « Configuration » surligné alors qu'on était sur le dashboard Forum), car TurboNav ne remplaçait que `#admin-content`. Ajout de `syncChrome()` : après chaque swap (clic **et** retour/avance navigateur), la sidebar `.adm-nav`, la barre `.adm-topnav` et le titre `.adm-header-title` sont réinjectés depuis la réponse serveur — qui calcule déjà le bon item actif via `AdminMenuService::isActive`.",
+                            "sub": false
+                        }
+                    ]
+                },
+                {
+                    "title": "🍪 RGPD — texte du bandeau par défaut",
+                    "items": [
+                        {
+                            "text": "Le **texte introductif** (et le titre) du bandeau cookies retombent désormais sur un **texte par défaut** (`RgpdService::DEFAULT_TITLE` / `DEFAULT_TEXT`) lorsqu'ils sont vides — aussi bien à l'affichage qu'à l'enregistrement. Avant, un `rgpd_text` enregistré vide était conservé tel quel (la valeur par défaut n'était appliquée que si la clé n'existait pas), d'où un bandeau sans texte.",
+                            "sub": false
+                        }
+                    ]
+                },
+                {
+                    "title": "🧭 Menus topbar — fermeture au clic",
+                    "items": [
+                        {
+                            "text": "**Mega-menu et menus déroulants topbar** : cliquer un lien laissait le panneau ouvert (avec TurboNav la page ne se recharge pas, et le `:hover` maintenait le panneau sous le curseur). Désormais, le clic sur un lien d'un `.adm-topnav-sub` retire l'état `open` et ajoute une classe `closing` qui neutralise le `:hover` jusqu'à ce que la souris quitte l'item → le menu se ferme immédiatement.",
+                            "sub": false
+                        }
+                    ]
+                },
+                {
+                    "title": "🧱 Configuration — services dédiés (Mail + Images)",
+                    "items": [
+                        {
+                            "text": "Poursuite de la séparation (comme SEO/RGPD/Sitemap) : extraction de **`MailService`** (réglages e-mail + validation de l'expéditeur) et **`ImageSettingsService`** (réglages d'optimisation **+ point d'entrée unique `optimize()`**). `ConfigurationController` s'allège : `saveEmail()` et la partie images de `saveSystem()` délèguent à ces services. **`SeoService` et l'upload de Configuration** appellent désormais `ImageSettingsService::optimize()` au lieu de dupliquer la lecture des réglages + l'appel à `ImageOptimizer`.",
+                            "sub": false
+                        }
+                    ]
+                },
+                {
+                    "title": "🪟 Compat Bootstrap — shim `bootstrap.Modal`",
+                    "items": [
+                        {
+                            "text": "Ajout d'un **shim minimal de l'API Bootstrap** (`window.bootstrap.Modal` / `Collapse` / `Tab`) dans `ui.js` : bascule la classe `.show` (CSS déjà fournie par `compat.css`), cohérent avec la délégation `data-bs-*`. Permet aux modules qui ouvrent des modales **par JS** (ex. le wizard de configuration de GameNodePanel) de fonctionner sans Bootstrap. Ajout de `modal-xl`, `modal-dialog-scrollable`, `btn-close-white` et en-têtes `.modal-header.bg-*` dans `compat.css`.",
+                            "sub": false
+                        }
+                    ]
+                },
+                {
+                    "title": "🖥️ Module GameNodePanel (ex-GameServerHub)",
+                    "items": [
+                        {
+                            "text": "Le plus gros module (≈700 fichiers) intégré au framework, puis **rebrandé GameServerHub → GameNodePanel (GNP)** : namespace/dossier/classe, routes `/admin/gamenodepanel`, préfixe des 80 tables `gsh_`→`gnp_`, sous-système GSHQ→GNPQ. Catégorie « Game Node Panel ». Détails dans son `changelog.json`. *(Reste : intégration shell fine — Phase 1.)*",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Modal changelog de la page Modules élargi** (620 → 880 px) pour les longs journaux.",
+                            "sub": false
+                        }
+                    ]
+                },
+                {
+                    "title": "🧩 Runner SQL robuste (dumps, triggers, FK) + changelog tolérant",
+                    "items": [
+                        {
+                            "text": "**`ModuleManager` exécute désormais les scripts SQL statement par statement** avec gestion de la directive **`DELIMITER`** (triggers/procédures à corps `BEGIN…END`) et **`FOREIGN_KEY_CHECKS=0`** le temps du script (CREATE TABLE avec FK « en avant », typiques des dumps phpMyAdmin/mysqldump). Permet d'installer des modules au schéma complexe (ex. GameServerHub : 80 tables/vues + triggers).",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Page Modules — modal changelog tolérant** : `info()` normalise les 3 formats de `changelog.json` rencontrés (liste, `{\"versions\":[…]}`, objet indexé par version) → le modal s'affiche correctement quel que soit le module.",
+                            "sub": false
+                        }
+                    ]
+                },
+                {
+                    "title": "🗑️ Suppression de module + correctif bouton ZIP",
+                    "items": [
+                        {
+                            "text": "**Suppression définitive d'un module** depuis la page Modules (bouton 🗑️ sur les modules non-cœur) : modal de **confirmation par saisie du nom** (anti-erreur), puis `ModuleManager::deleteModule()` exécute `uninstall.sql` (**suppression des tables/données**), retire les lignes `modules` + `module_migrations` et **supprime le dossier** du module sur le disque. Les **modules cœur** (Auth/Configuration/System) sont refusés.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Correctif** : le bouton « ⬆️ Installer (.zip) » n'ouvrait pas le formulaire (le `style=\"display:none\"` inline l'emportait sur la classe `.open`) → géré entièrement en CSS désormais.",
+                            "sub": false
+                        }
+                    ]
+                },
+                {
+                    "title": "🪄 Générateur de module (scaffolding)",
+                    "items": [
+                        {
+                            "text": "Nouvel assistant **`/admin/modules/generate`** (bouton « 🪄 Générer un module » sur la page Modules). À partir d'un formulaire (nom PascalCase, nom affiché, description, auteur, icône, catégorie, sections, mega-menu), `ModuleGeneratorService` génère un **module complet et activable** : `module.json` (menu + catégorie), classe `BaseModule`, `routes.php`, `Controllers/AdminController` (dashboard + une méthode par section), `Services/<Nom>Service`, `database/install.sql` + `uninstall.sql` + dossier `migrations/`, `changelog.json`, et les **vues UI maison** (.ui-*). Slugs de sections translittérés (accents). Module créé **inactif** (activation ensuite, avec vérification des tables).",
+                            "sub": false
+                        }
+                    ]
+                },
+                {
+                    "title": "📦 Installeur de module depuis un ZIP",
+                    "items": [
+                        {
+                            "text": "Bouton **« ⬆️ Installer un module (.zip) »** sur la page Modules. Service dédié `ModuleInstallerService` : validation (taille 50 Mo max, extension .zip, extension PHP zip), **protection zip-slip**, détection du `module.json` (racine ou sous-dossier), validation du manifeste (`name`/`class`), extraction puis déplacement vers `modules/<Name>` avec **sauvegarde de l'ancienne version** en cas de mise à jour. L'archive est **installée mais pas activée automatiquement** : l'activation passe par la couche de vérification des tables.",
+                            "sub": false
+                        }
+                    ]
+                },
+                {
+                    "title": "🩺 Page Diagnostic / santé (nouveau)",
+                    "items": [
+                        {
+                            "text": "Nouvelle page **`/admin/diagnostic`** (Configuration → Diagnostic) avec `DiagnosticService` + `DiagnosticController` dédiés. Contrôles : tables cœur (users/settings/modules), **module actif sans ses tables**, **version module.json ≠ base / migrations en attente**, dossier actif manquant, dossiers non inscriptibles (uploads/logs/racine), présence de `/install`. Synthèse OK / Avertissements / Erreurs.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Réparations en un clic** : réinstaller un module (recrée les tables), mettre à jour (migrations), désactiver un module orphelin, supprimer `/install`.",
+                            "sub": false
+                        }
+                    ]
+                },
+                {
+                    "title": "🔄 Migrations versionnées par module",
+                    "items": [
+                        {
+                            "text": "Nouveau système de **migrations** : un module peut fournir `database/migrations/*.sql` (fichiers ordonnés par nom). Table de suivi **`module_migrations`** (module + migration appliqués).",
+                            "sub": false
+                        },
+                        {
+                            "text": "**`install.sql` = baseline** (état complet à jour) : à l'activation, les migrations présentes sont marquées « appliquées » sans être rejouées. Les migrations ne servent qu'aux **mises à jour** d'un module déjà installé.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**`ModuleManager::updateModule()`** exécute les migrations en attente (dans l'ordre, chacune enregistrée ; arrêt au 1ᵉʳ échec sans marquer la migration fautive) et synchronise la version en base sur celle du `module.json`. `pendingMigrationCount()` pour l'UI.",
+                            "sub": false
+                        },
+                        {
+                            "text": "Permet les **mises à jour de modules payants** (v1.0 → v1.1) sans casser le schéma.",
+                            "sub": false
+                        }
+                    ]
+                },
+                {
+                    "title": "🛡️ Installation de module — sécurisée et atomique",
+                    "items": [
+                        {
+                            "text": "**`ModuleManager::activateModule()` durci** : l'activation ne réussit que si **(1)** le schéma SQL s'exécute sans erreur, **(2)** toutes les tables déclarées (`CREATE TABLE`) existent réellement après coup (vérification via `information_schema`), et **(3)** le hook `install()` réussit. À la moindre erreur, le module **n'est pas activé**, les **tables partiellement créées sont nettoyées** (`uninstall.sql`), et `active` est remis à 0. Plus jamais de **menu actif sans tables**.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Message d'erreur exposé** : l'erreur réelle (ex. syntaxe SQL) est conservée (`getLastError()`) et **affichée dans la page Modules** lors d'une tentative d'activation échouée, au lieu d'un message générique.",
+                            "sub": false
+                        },
+                        {
+                            "text": "`deactivateModule()` aligné (capture `Throwable` + `getLastError()`).",
+                            "sub": false
+                        }
+                    ]
+                },
+                {
+                    "title": "🗂️ Modules — regroupement par catégorie",
+                    "items": [
+                        {
+                            "text": "La page **Modules** (`/admin/modules`) regroupe désormais les modules par **catégorie**, avec un en-tête par section (les modules **cœur** sont côte à côte sous « 🛠️ Système »). Nouvelle clé **`\"category\"`** dans `module.json` (ex. Forum → « Communautaire », Marketplace → « e-commerce ») ; à défaut, un module cœur tombe dans « Système », les autres dans « Autres ». Tri : Système en premier, Autres en dernier. Les filtres Actifs/Inactifs masquent les sections devenues vides.",
+                            "sub": false
+                        }
+                    ]
+                },
+                {
+                    "title": "🧩 Modules — modal de détails / changelog",
+                    "items": [
+                        {
+                            "text": "La page **Modules** (`/admin/modules`) affiche de nouveau, via un **bouton « ℹ️ Détails »** par carte, un **modal** récapitulant nom, version, auteur, dépendances, statut « cœur » et le **journal des modifications** lu depuis le `changelog.json` du module (endpoint `/admin/modules/info` déjà existant). Modal en UI maison (fermeture backdrop/Échap).",
+                            "sub": false
+                        }
+                    ]
+                },
+                {
+                    "title": "🧭 Mega-menu en opt-in + switchs sécurité",
+                    "items": [
+                        {
+                            "text": "**Mega-menu désormais explicite** : il ne se déclenche plus automatiquement au-delà de 6 entrées (ce qui transformait à tort le menu **Configuration** en mega-menu bogué). Il faut maintenant déclarer **`\"mega\": true`** dans le `module.json` de l'item. Seul **Forum** l'active ; Configuration redevient un menu déroulant classique. (`AdminMenuService::normalize()` propage la clé `mega`.)",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Centre de sécurité — interrupteurs** : les activations (globale, blocage auto, par catégorie, et la colonne « Actif » de chaque détecteur) sont rendues par de **vrais switchs coulissants** (CSS maison, accent du thème) au lieu de cases à cocher.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Mega-menu Forum — pleine largeur** : le panneau était ancré sous le libellé « Forum » et débordait à droite. Il est désormais un **panneau pleine largeur ancré au bas réel du header** : l'item porteur passe en `position: static` et le panneau en `position: absolute; top: 100%; left:0; right:0` (s'ancre sur le header `sticky`), grille 4 colonnes → 3 sous 900px → 2 sous 640px, en mode topbar. `top: 100%` suit la hauteur réelle du header (bannière `/install`, nav sur 2 lignes) → plus de chevauchement ni de débordement.",
+                            "sub": false
+                        }
+                    ]
+                }
+            ],
+            "version": "4.0.0-alpha.7",
+            "types": [
+                "feature",
+                "module"
+            ]
+        },
+        {
+            "label": "[Non publié] — 2026-05-30 (suite 4)",
+            "date": "2026-05-30",
+            "title": "Renommage Aegis Framework + Centre de sécurité",
+            "groups": [
+                {
+                    "title": "🏷️ Renommage — Aegis Framework",
+                    "items": [
+                        {
+                            "text": "Toutes les références **eSport-CMS / ESPORT-CMS / ESPORTCMS / ESPORT_CMS** remplacées par **Aegis Framework / AEGIS_FRAMEWORK** sur l'ensemble du code (76 remplacements, 54 fichiers). La **constante de garde** `ESPORT_CMS` → `AEGIS_FRAMEWORK` (define + tous les `defined()` modifiés ensemble), les libellés affichés, les domaines/e-mails (`esport-cms` → `aegis-framework`), docs incluses.",
+                            "sub": false
+                        }
+                    ]
+                },
+                {
+                    "title": "🐛 Correctif connexion",
+                    "items": [
+                        {
+                            "text": "**`Auth::checkRememberMe()`** utilisait `$this->db` (inexistant sur un module) → erreur fatale « Undefined property: Auth\\\\Auth::$db » dès qu'un cookie « se souvenir de moi » était présent, ce qui cassait la page de connexion. La base est désormais récupérée via le conteneur global avec garde-fou.",
+                            "sub": false
+                        }
+                    ]
+                },
+                {
+                    "title": "🛡️ Centre de sécurité — Phase 1 (fondation)",
+                    "items": [
+                        {
+                            "text": "Nouveau **`SecurityCenterService`** (cerveau), construit **sur** le `SecurityFirewallService` existant (enforcement/blocage déjà câblé dans le pipeline).",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Catalogue de 27 détecteurs** répartis en 6 catégories (🌐 Web, 🔍 Scans, 🔐 Auth/Sessions, 📤 Uploads, 🚦 Anti-abus, 🖥️ Admin), chacun avec **gravité** (info/faible/moyen/élevé/critique) et **score de menace** — administrable.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Score de menace par IP** + niveaux (0–25 Faible, 26–50 Moyen, 51–75 Élevé, 76–100+ Critique) avec **blocage automatique** : seuil (défaut **100 pts → 24 h**) et seuil critique (défaut **300 pts → permanent**), configurables.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Listes IP administrables** : liste blanche (jamais bloquée, déblocage auto à l'ajout) en base + liste noire (blocage permanent manuel) et blocage temporaire.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Configuration complète** : activation globale, activation par catégorie, seuils, durée de blocage, rétention de l'historique.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Nouvelles tables** : `security_settings`, `security_rules` (27 règles seedées), `security_threat_scores`, `security_ip_whitelist` ; colonnes `category`/`score`/`rule_key` ajoutées à `security_events` (idempotent).",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Page admin refondue** (`/admin/security`) en UI maison à onglets : 📊 Tableau de bord (KPI, événements par catégorie, top IP par score), 🧩 Détecteurs (toggle par catégorie/détecteur, score, gravité), ⚙️ Seuils & config, 📋 Listes IP (blanche/noire/blocages), 🧾 Historique (filtres + purge). Contrôleur + routes dédiés.",
+                            "sub": false
+                        }
+                    ]
+                },
+                {
+                    "title": "🛡️ Centre de sécurité — Phase 2 (détecteurs réels)",
+                    "items": [
+                        {
+                            "text": "**Moteur de détection HTTP** (`SecurityCenterService::inspectHttpRequest()`) + middleware **`SecurityCenterDetector`** branché dans le pipeline juste après le firewall. Analyse la **surface URL** (chemin + query string + User-Agent) — **jamais les corps POST**, pour éviter les faux positifs sur les contenus légitimes (forum, réglages…). Blocage immédiat (403) si un seuil est franchi.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Batch 1 — surface URL (17 détecteurs)** : `path_traversal`, `lfi`, `rfi`, `sql_injection`, `xss_attempt` (🌐) ; `git_probe`, `env_probe`, `backup_probe`, `sensitive_file_probe`, `cms_scan`, `scanner_detected`, `directory_scan` (🔍) ; `admin_panel_probe` (🖥️, exclut notre propre `/admin`) ; `suspicious_ua`, `suspicious_pattern` (🚦). Testé : 15/15 (attaques détectées, **zéro faux positif** sur `/admin`, `/forum`, `/auth`, assets).",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Batch 2 — Authentification** : `csrf_attack` (échec de token sur login), `brute_force` (échec d'identifiants), `auth_flood` (limite de tentatives atteinte) signalés depuis `AuthController` via le conteneur global (`$GLOBALS['securityCenterService']`, couplage souple — la sécurité ne peut jamais casser l'authentification).",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Batch 3 — Uploads, Session, Rate-limit** :",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Uploads** (inspection centralisée dans le middleware sur `$_FILES`, basée sur noms/extensions) : `malicious_upload` (webshells connus : shell.php, c99, r57…), `double_extension` (ex. `image.jpg.php`), `executable_upload` (.php/.phtml/.exe/.sh/.py…). Faible taux de faux positifs (les uploads légitimes sont images/docs/archives).",
+                            "sub": true
+                        },
+                        {
+                            "text": "**Session** : `session_hijacking` — `SessionManager` pose un drapeau global à la divergence d'empreinte (IP/User-Agent), relevé par le middleware (score 50 = critique).",
+                            "sub": true
+                        },
+                        {
+                            "text": "**Pont rate-limit** : les détections de `SecurityFirewallService` alimentent désormais le score (`rate_limit_exceeded`, ou `request_flood` si dépassement > ×3) via un *sink* branché dans bootstrap.",
+                            "sub": true
+                        },
+                        {
+                            "text": "**Bilan : 24 des 27 détecteurs actifs.** Non déclenchés volontairement : `clickjacking` (déjà neutralisé par l'en-tête `X-Frame-Options`), `account_enumeration` (l'app ne divulgue pas l'existence des comptes — messages d'erreur uniformes), `invalid_session` (faible surface) — conservés au catalogue, administrables.",
+                            "sub": false
+                        },
+                        {
+                            "text": "Correctif : suppression de la dernière mention « Protection GSH » (page de blocage du firewall) → « Aegis Framework ».",
+                            "sub": false
+                        }
+                    ]
+                }
+            ],
+            "version": "4.0.0-alpha.6",
+            "types": [
+                "feature",
+                "security"
+            ]
+        },
+        {
+            "label": "[Non publié] — 2026-05-30 (suite 3)",
+            "date": "2026-05-30",
+            "title": "Module Forum + méga-menu",
+            "groups": [
+                {
+                    "title": "🗨️ Module Forum installé + mega-menu",
+                    "items": [
+                        {
+                            "text": "**Module Forum activé** via le système d'installation : **26 tables `forum_*`** créées (catégories, sujets, messages, signalements, thèmes, widgets sidebar, sondages, liens de navigation, permissions modérateurs, shoutbox, réputation/récompenses, etc.). **110 routes** enregistrées (front `/forum/*`, API `/forum/api/*`, admin `/admin/forum/*`). Aucun couplage GSH — clés étrangères uniquement vers `users` et `forum_*`.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**`ModuleManager::runModuleSchema()`** : nouvelle convention d'installation supportant **deux formats** — soit `database/install.sql` (fichier unique), soit `schema.sql` + `schema_*.sql` (racine du module, triés alphabétiquement). Chaque fichier est exécuté dans son **propre try/catch** : une migration facultative déjà appliquée n'interrompt pas l'installation (avertissement loggé). `activateModule()` appelle ce schéma avant `install()`.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Mega-menu** : un menu d'administration avec **plus de 6 entrées** déclenche automatiquement l'affichage en mega-menu (mode topbar) — Forum expose **14 sections** (📊 Tableau de bord, 📁 Catégories, 💬 Sujets, 📝 Messages, 🚩 Signalements, 👥 Utilisateurs, 📄 Pages statiques, 🎨 Thèmes, 🧩 Widgets sidebar, 🗳️ Sondages, 🔗 Liens de navigation, 🛡️ Permissions modérateurs, 💭 Shoutbox, ⚙️ Réglages).",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Topbar** : `<ul class=\"adm-topnav-sub mega\">` → grille **3 colonnes** (`repeat(3, minmax(180px,1fr))`, min 580px, max 92vw), repositionnement vers la gauche pour les derniers items, repli 2 colonnes < 700px.",
+                            "sub": true
+                        },
+                        {
+                            "text": "**Sidebar** : hauteur du sous-menu déplié portée de 500px à **900px** pour accueillir les 14 entrées sans coupure.",
+                            "sub": true
+                        },
+                        {
+                            "text": "**Désactivation non destructive** : le module Forum n'a pas de `database/uninstall.sql` → désactiver le module **conserve les données** (tables `forum_*` non supprimées). À documenter pour l'utilisateur.",
+                            "sub": false
+                        }
+                    ]
+                }
+            ],
+            "version": "4.0.0-alpha.5",
+            "types": [
+                "module"
+            ]
+        },
+        {
+            "label": "[Non publié] — 2026-05-30 (suite 2)",
+            "date": "2026-05-30",
+            "title": "Installation / désinstallation de modules + Tickets",
+            "groups": [
+                {
+                    "title": "🧩 Installation / désinstallation de modules",
+                    "items": [
+                        {
+                            "text": "**ModuleManager exécute les SQL** : à l'activation d'un module → `modules/<Nom>/database/install.sql` (création des tables) ; à la désactivation → `database/uninstall.sql` (suppression). Convention générique pour tous les modules, pilotable depuis la page **Modules**.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Module Tickets intégré** : support de tickets (admin + espace membre), installable/désinstallable via l'interface.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Dé-couplé de GameServerHub** : retrait de la clé étrangère vers `gsh_game_servers`, des JOIN `gsh_*` du service et de la sélection de serveur (création de ticket possible sans serveur). `problem_type` conservé.",
+                            "sub": true
+                        },
+                        {
+                            "text": "**Vues admin réécrites** en UI maison `.ui-*` (liste avec KPI/filtres + détail avec fil de discussion, réponse, statut, suppression). Menu : entrée simple « 🎫 Tickets » (pas de mega-menu nécessaire).",
+                            "sub": true
+                        },
+                        {
+                            "text": "Vues membre conservées (thème espace membre existant), création adaptée sans serveur.",
+                            "sub": true
+                        }
+                    ]
+                }
+            ],
+            "version": "4.0.0-alpha.4",
+            "types": [
+                "feature",
+                "module"
+            ]
+        },
+        {
+            "label": "[Non publié] — 2026-05-30 (suite)",
+            "date": "2026-05-30",
+            "title": "Monitoring, mode debug & réorganisation des assets",
+            "groups": [
+                {
+                    "title": "📡 Monitoring — corrections",
+                    "items": [
+                        {
+                            "text": "**Section « Permissions » corrigée** : `getAppRoot()` pointait vers `modules/System` (au lieu de la racine) depuis le déplacement du service → aucun fichier critique détecté. Corrigé via `ROOT_PATH`. La section liste désormais index.php, .htaccess, bootstrap, config DB/sécurité, .env — avec permissions octales **et** état lecture seule / inscriptible.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Onglet Stockage corrigé** : la taille du projet et la répartition étaient calculées sur le mauvais dossier (même cause) → désormais correctes (racine réelle).",
+                            "sub": false
+                        }
+                    ]
+                },
+                {
+                    "title": "🐞 Mode debug fonctionnel",
+                    "items": [
+                        {
+                            "text": "Le réglage **« Mode debug »** est désormais l'**interrupteur maître** : quand il est actif, il force l'affichage des erreurs et l'injection de la debug bar, **quel que soit l'environnement**. Avant, l'injection était gardée par `APP_ENV` (debug_bar) et ignorait le réglage admin (rien ne se passait en production).",
+                            "sub": false
+                        }
+                    ]
+                },
+                {
+                    "title": "🗂️ Réorganisation des assets + nettoyage final",
+                    "items": [
+                        {
+                            "text": "**Plus de dossier `/assets/` à la racine** : tout déplacé dans **`framework/assets/`** (css/admin, js/admin, images, flags). Toutes les références (`u('/assets/…')`, installeur, firewall, contrôleurs) mises à jour vers `/framework/assets/`.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**TurboNav déplacé** dans `framework/assets/js/turbo-nav.js`.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Boxicons entièrement retiré** : `icons.css` + polices d'icônes (boxicons, LineIcons) supprimées, lien retiré du shell admin. Aucune référence restante.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Général (Configuration)** : upload du logo et de l'image de couverture en **glisser-déposer** avec aperçu de l'image en place.",
+                            "sub": false
+                        }
+                    ]
+                }
+            ],
+            "version": "4.0.0-alpha.3",
+            "types": [
+                "fix"
+            ]
+        },
+        {
+            "label": "[Non publié] — 2026-05-30",
+            "date": "2026-05-30",
+            "title": "Pages d’authentification, RGPD avancé & SEO",
+            "groups": [
+                {
+                    "title": "🔐 Pages d'authentification + suppression de Bootstrap",
+                    "items": [
+                        {
+                            "text": "**Login, inscription, mot de passe oublié, réinitialisation** réécrits en UI maison autonome (CSS partagé `auth/_head.php`, zéro Bootstrap/jQuery/plugin) : layout visuel + formulaire, interrupteur « se souvenir », alertes, reCAPTCHA et bannière cookies conservés. Favicon injecté si défini.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Bootstrap & dépendances supprimés définitivement** : `bootstrap.min.css`, `bootstrap-extended.css`, `bootstrap.bundle.min.js`, `jquery.min.js`, `app.css/js`, `pace`, anciens thèmes (`dark-theme`, `semi-dark`, `header-colors`), `index/index2/index3/widgets.js` et tout le dossier `assets/plugins/` (simplebar, perfect-scrollbar, metismenu, vectormap, chartjs). Conservés : `assets/css/icons.css` (boxicons), `assets/css/admin/`, `assets/js/admin/`, `assets/js/turbo-nav.js`.",
+                            "sub": false
+                        }
+                    ]
+                },
+                {
+                    "title": "🍪 RGPD avancé (conforme CNIL)",
+                    "items": [
+                        {
+                            "text": "Page RGPD enrichie : **position** (haut/bas), **durée de validité** du consentement (30→395 j, max légal CNIL 13 mois), lien politique de confidentialité, titre/texte.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Catégories** : essentiels (toujours actifs) + analytiques / marketing / réseaux sociaux (interrupteurs).",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Apparence** : couleurs (fond, texte, accent « Accepter », bouton « Refuser »), arrondi des coins.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Réinitialisation des consentements** (bouton) → le bandeau réapparaît pour tous les visiteurs (versionnement).",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Bandeau public** réécrit : applique position/couleurs/arrondi/catégories, durée de cookie selon la validité, refus aussi visible que l'acceptation (CNIL).",
+                            "sub": false
+                        }
+                    ]
+                },
+                {
+                    "title": "🔍 SEO & médias (nouveau)",
+                    "items": [
+                        {
+                            "text": "Nouvelle page **Configuration → SEO & médias** (`/admin/configuration/seo`) avec **contrôleur + service dédiés** (`SeoController` / `SeoService`).",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Uploads** : logo (SVG/PNG/JPG/WebP/GIF), favicon (SVG/PNG/ICO), image Open Graph (PNG/JPG/WebP) — avec aperçu et suppression, validation MIME + taille.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Référencement** : modèle de titre, meta description (160 car.), mots-clés, directive **robots** (index/noindex…), **Google Analytics / Tag Manager**.",
+                            "sub": false
+                        },
+                        {
+                            "text": "L'onglet « SEO » de la page Paramètres est retiré (remplacé par cette page dédiée).",
+                            "sub": false
+                        }
+                    ]
+                },
+                {
+                    "title": "🔧 Corrections & ajustements",
+                    "items": [
+                        {
+                            "text": "**Réglages restaurés** : la table `settings` avait été recréée vide → debug, cache, mode maintenance, reCAPTCHA, SEO (nom du site) et e-mails semblaient « cassés » car ils lisaient des valeurs absentes. Les 33 réglages ont été restaurés ; ces fonctionnalités refonctionnent. L'installeur seed désormais l'ensemble complet des réglages par défaut.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Menu réorganisé** : suppression du groupe « Système ». **Modules, Centre de sécurité et Monitoring** sont déplacés dans le menu **Configuration**.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Module System protégé** : `isProtectedModule()` se base désormais sur le flag `core` du module.json → Auth, Configuration et System ne sont plus désactivables.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Transition clair/sombre** retravaillée : fondu uniforme et coordonné (classe `theme-anim` activée le temps du basculement) au lieu du fondu inégal entre éléments.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Onglet TurboNav** enrichi (présentation, bénéfices, état actuel) dans Configuration.",
+                            "sub": false
+                        }
+                    ]
+                }
+            ],
+            "version": "4.0.0-alpha.2",
+            "types": [
+                "feature",
+                "security"
+            ]
+        },
+        {
+            "label": "[Non publié] — 2026-05-29",
+            "date": "2026-05-29",
+            "title": "Socle initial : installeur & refonte de l’interface",
+            "groups": [
+                {
+                    "title": "🚀 Installeur `/install/` (nouveau)",
+                    "items": [
+                        {
+                            "text": "**Assistant d'installation multi-étapes** (sidebar + design maison, sans dépendance) : 1) présentation, 2) vérification des prérequis & droits d'écriture, 3) connexion base de données, 4) compte administrateur, 5) **installation en AJAX** (barre de progression, étapes animées).",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Vérification d'hébergement** : PHP 8.5+ requis, extensions (mbstring, pdo_mysql, curl, gd, fileinfo, openssl, zip, json, intl), directives (file_uploads, log_errors), mod_rewrite, droits d'écriture — avec **aide contextuelle** si un élément manque.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Installation automatique** : création de la base, import du schéma (20 tables), compte super-admin (Argon2id), activation des modules cœur (Auth/Configuration/System), réglages par défaut, écriture du `.env`, verrou `install/installed.lock` anti-réinstallation.",
+                            "sub": false
+                        },
+                        {
+                            "text": "`install/schema.sql` : schéma complet de la base généré.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**UX affinée** : étape « Prérequis » avec **loader animé** (roue de chargement, résultats révélés un par un ✅/❌) et grille compacte (moins de défilement) ; **champs de saisie redessinés** (icônes, focus, espacement) sur les étapes Base de données et Administrateur.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Bannière de sécurité admin** : un bandeau discret apparaît en haut de l'administration tant que le dossier `/install` existe (rappel de le supprimer). Masquable pour la session.",
+                            "sub": false
+                        }
+                    ]
+                },
+                {
+                    "title": "🍪 RGPD / Cookies (nouveau, administrable)",
+                    "items": [
+                        {
+                            "text": "**Refactor (architecture)** : RGPD déplacé dans son **propre `RgpdController` + `RgpdService`** (séparés de Configuration/SettingsService) — règle « un contrôleur + un service par fonctionnalité ».",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Interface simplifiée** : catégories standard fixes (Nécessaires/Préférences/Statistiques/Marketing) avec interrupteurs on/off et libellés éditables — fini l'éditeur technique (codes/JSON).",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Table `settings` manquante créée** : la base ne contenait pas la table `settings` attendue par `SettingsService` → toute la configuration du CMS échouait silencieusement (retour aux valeurs par défaut). Table recréée (`param_key` / `param_value` / `param_type`). **La configuration se sauvegarde de nouveau.**",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Système RGPD complet et administrable** : nouvel écran *Configuration → 🍪 RGPD / Cookies* (`/admin/configuration/rgpd`) — activation de la bannière, titre/texte, lien politique, et **éditeur de catégories de cookies** dynamiques (ajout/suppression, requise/active, description).",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Bannière publique réécrite** : dynamique (catégories configurées), consentement par catégorie, boutons Tout accepter / Refuser / Personnaliser, **versionnée** (toute modification redemande le consentement), stockage cookie + localStorage, sans dépendance.",
+                            "sub": false
+                        }
+                    ]
+                },
+                {
+                    "title": "🔒 Sécurité (audit complet)",
+                    "items": [
+                        {
+                            "text": "**Injection SQL corrigée** dans `AIModelService` (`getByCapability`, `update`) — requêtes désormais préparées.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Injection SQL corrigée** dans `MonitoringService` (`information_schema`) — passage de `PDO::quote()` à des requêtes préparées.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Injection SQL (LIMIT)** sécurisée dans `MemberController::getUserSessions` (cast entier explicite).",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Injection de commande** corrigée dans `AdminController` (arrêt serveur SSH) — `escapeshellarg()` + validation stricte des PIDs et ports.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**CSRF centralisé** : `Router::enableCsrfGuard()` valide automatiquement le token sur toute requête `POST/PUT/PATCH/DELETE` (déni par défaut, liste d'exceptions configurable). Plus de dépendance à une validation manuelle par contrôleur.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Rate limiting du login (compte + IP)** : `RateLimiter` branché sur `AuthService::login()` — clé par compte (anti-attaque ciblée) et par IP (anti-énumération). 5 tentatives / 5 min → blocage 15 min. IP via `REMOTE_ADDR` uniquement (anti-spoof).",
+                            "sub": false
+                        },
+                        {
+                            "text": "**CSP durcie** : suppression de `unsafe-eval`.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Uploads** : `framework/uploads/.htaccess` renforcé (moteur PHP désactivé, handlers retirés, exécutables bloqués) — protection contre l'exécution de scripts.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Logs** : rotation par taille (10 Mo) + rétention (30 j) dans `Logger` ; `framework/logs/.htaccess` interdit tout accès web.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Pollution de variables** : `extract()` remplacé par `EXTR_SKIP` dans les rendus de vues.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**API** : endpoint `/api/system/status` ne divulgue plus l'environnement.",
+                            "sub": false
+                        }
+                    ]
+                },
+                {
+                    "title": "🤖 Modèles IA — simplification",
+                    "items": [
+                        {
+                            "text": "**Champs inutiles supprimés** : `context_window`, `pricing_input`, `pricing_output` (colonnes SQL + UI + service + contrôleur + schéma + seed). La fiche/édition ne montre plus le bloc « Paramètres techniques ». Conservé : capacités (vision/code/audio…), provider, nom, notes, actif/défaut.",
+                            "sub": false
+                        },
+                        {
+                            "text": "Formulaires **création/édition** réécrits en UI maison.",
+                            "sub": false
+                        }
+                    ]
+                },
+                {
+                    "title": "🖌️ Portage des pages admin vers l'UI maison — TERMINÉ",
+                    "items": [
+                        {
+                            "text": "**Toutes les vues d'administration sont désormais sans Bootstrap** (vérifié : zéro marqueur `data-bs-`/`col-*`/`page-wrapper`…). Pages portées en `.ui-*` : Tableau de bord, Utilisateurs (liste, fiche, création, édition), Configuration/Paramètres (onglets + sauvegarde AJAX par section), Modèles IA (liste, création, édition), Modules, Sécurité, Monitoring, RGPD.",
+                            "sub": false
+                        },
+                        {
+                            "text": "La bannière cookies n'est plus pilotée par la section Sécurité (doublon retiré) — seule la page RGPD la gère.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Correctif** : badge de rôle « Super Admin » invisible dans la liste des utilisateurs (classe `.bg-dark` manquante dans la couche de compatibilité → texte blanc sur fond clair). Ajout de `.bg-dark`, `.bg-light`, `.text-dark`.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Pages réécrites en markup natif `.ui-*`** (fin de la dépendance au markup Bootstrap, fini le « trop large/trop gros ») : **Utilisateurs (liste + fiche détaillée)**, **Modules**, **Centre de sécurité**, **Modèles IA (liste)**. KPI, tableaux, cartes et badges cohérents, dark/light géré. La fiche utilisateur abandonne le plugin de carte (jVectorMap) au profit d'un lien OpenStreetMap.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Plein écran corrigé** : l'appel `requestFullscreen` détaché provoquait une « Illegal invocation » → le bouton plein écran ne faisait rien. Corrigé (appel lié à l'élément + préfixes navigateurs).",
+                            "sub": false
+                        }
+                    ]
+                },
+                {
+                    "title": "🌱 Données par défaut (seed)",
+                    "items": [
+                        {
+                            "text": "**Modèles IA restaurés** : la table `ai_models` était vide. Ajout de `install/seed.sql` (13 modèles OpenAI/Claude/Mistral) exécuté par l'installeur (nouvelle étape « Données par défaut »), et restauration dans la base courante.",
+                            "sub": false
+                        }
+                    ]
+                },
+                {
+                    "title": "🎨 Interface d'administration (refonte complète, zéro dépendance externe)",
+                    "items": [
+                        {
+                            "text": "**Suppression de Bootstrap/jQuery** du back-office au profit d'une **UI maison** (`assets/css/admin/ui.css`, `assets/js/admin/ui.js`).",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Shell commutable** : disposition **sidebar** ou **header horizontal** (mega-menu), thème **clair/sombre/auto**, **plein écran**, **couleur d'accent** personnalisable. Préférences en `localStorage` (anti-FOUC).",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Panneau d'apparence** accessible depuis le menu utilisateur (plus de bouton flottant).",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Emoji** comme iconographie principale du chrome.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Couche de compatibilité** (`assets/css/admin/compat.css`) : les pages non encore réécrites restent fonctionnelles et au nouveau look.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Dashboard** refait (KPI, graphe d'inscriptions sans librairie, répartition par rôle).",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Page Monitoring** refaite : emoji, thème dark/light, onglets en JS vanilla.",
+                            "sub": false
+                        }
+                    ]
+                },
+                {
+                    "title": "🧩 Architecture modulaire",
+                    "items": [
+                        {
+                            "text": "**Menu admin 100 % JSON** : chaque `module.json` déclare sa clé `menu` (label, icône, url, position, sous-menus). `AdminMenuService` agrège les modules actifs. Plus aucun menu codé en dur.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Module `System`** créé (cœur, non désactivable) : regroupe Modules, Centre de sécurité et Monitoring (contrôleurs + service + vues + routes), auparavant éparpillés dans `framework/`.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Modules cœur** (`\"core\": true`) non désactivables : Auth, Configuration, System.",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Réorganisation des fichiers** :",
+                            "sub": false
+                        },
+                        {
+                            "text": "Shell admin → `framework/Views/theme/admin/` (helpers `admin_header()` / `admin_footer()`).",
+                            "sub": true
+                        },
+                        {
+                            "text": "Pages publiques (maintenance, bannière cookies) → `framework/Views/theme/public/`.",
+                            "sub": true
+                        },
+                        {
+                            "text": "`framework/Views/admin/` et `framework/Controllers/` supprimés.",
+                            "sub": true
+                        }
+                    ]
+                },
+                {
+                    "title": "🐛 Corrections",
+                    "items": [
+                        {
+                            "text": "**`/admin/users`** : erreur « Undefined variable `$basePath` » corrigée (passage à `BASE_URL`).",
+                            "sub": false
+                        },
+                        {
+                            "text": "**`/admin/configuration/ai-models`** : 404 corrigé (URL de menu alignée sur la route réelle).",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Mode horizontal** : suppression de l'ascenseur horizontal parasite ; le mega-menu n'est plus rogné (cause : `overflow` du conteneur de nav).",
+                            "sub": false
+                        },
+                        {
+                            "text": "**TurboNav** rétabli dans le nouveau shell (et dé-référencé de GSH : global `TURBONAV`, conteneur `#admin-content`).",
+                            "sub": false
+                        },
+                        {
+                            "text": "**Logs parasites** : `GeolocService` ne journalise plus à chaque appel (logging derrière un flag `DEBUG` désactivé). Les `error_log()` PHP vont dans `C:/wamp64/logs/php_error.log`.",
+                            "sub": false
+                        }
+                    ]
+                }
+            ],
+            "version": "4.0.0-alpha.1",
+            "types": [
+                "release"
+            ]
+        }
+    ]
+}
