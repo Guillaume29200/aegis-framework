@@ -585,6 +585,21 @@ html[data-theme="dark"] .adm-install-warn { color: var(--amber); }
 }
 .adm-install-x:hover { opacity: 1; }
 
+/* Bandeau « erreurs de diagnostic détectées » (rouge, cliquable) */
+.adm-diag-warn {
+    display: flex; align-items: center; justify-content: center; gap: 14px;
+    background: var(--red-soft); color: #9b1c1c;
+    font-size: 12.5px; font-weight: 600;
+    padding: 7px 14px; position: relative; z-index: 60;
+    border-bottom: 1px solid var(--red);
+}
+html[data-theme="dark"] .adm-diag-warn { color: var(--red); }
+.adm-diag-link {
+    color: inherit; text-decoration: underline; white-space: nowrap;
+    font-weight: 700;
+}
+.adm-diag-link:hover { opacity: .8; }
+
 /* Bandeau « mode maintenance actif » (rouge, sous le bandeau /install) */
 .adm-maint-warn {
     display: flex; align-items: center; justify-content: center; gap: 10px;

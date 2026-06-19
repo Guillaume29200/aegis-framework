@@ -135,16 +135,25 @@
     }
 
     function executeInlineScripts(container, scripts, extraScripts) {
+        // IMPORTANT : on exécute les scripts inline en SCOPE GLOBAL (comme lors
+        // d'un chargement de page classique), et NON enveloppés dans une IIFE.
+        // L'IIFE isolait le scope mais empêchait les déclarations « function x(){} »
+        // d'être globales → tous les gestionnaires onclick="x()" cassaient après
+        // une navigation TurboNav. On accepte qu'un éventuel « X already declared »
+        // (const/let au niveau global re-déclaré lors d'une revisite) soit signalé
+        // en console : c'est sans gravité (la 1re déclaration reste valable) et
+        // bien moins pénalisant que de casser les fonctions globales.
         scripts.forEach(oldScript => {
-            // Enveloppé dans un IIFE pour isoler le scope et éviter les
-            // erreurs "X has already been declared" lors des navigations
-            // successives (const/let déclarés au niveau global).
             const newScript = document.createElement('script');
             Array.from(oldScript.attributes).forEach(attr => {
                 newScript.setAttribute(attr.name, attr.value);
             });
-            newScript.textContent = ';(function(){\n' + oldScript.textContent + '\n})();';
-            oldScript.parentNode.replaceChild(newScript, oldScript);
+            newScript.textContent = oldScript.textContent;
+            try {
+                oldScript.parentNode.replaceChild(newScript, oldScript);
+            } catch (e) {
+                console.warn('[TurboNav] Erreur d\'exécution d\'un script inline :', e);
+            }
         });
 
         // Ré-exécuter les scripts orphelins détectés hors de #admin-content
@@ -152,8 +161,12 @@
         if (extraScripts && extraScripts.length) {
             extraScripts.forEach(function(code) {
                 const s = document.createElement('script');
-                s.textContent = ';(function(){\n' + code + '\n})();';
-                container.appendChild(s);
+                s.textContent = code;
+                try {
+                    container.appendChild(s);
+                } catch (e) {
+                    console.warn('[TurboNav] Erreur d\'exécution d\'un script orphelin :', e);
+                }
             });
         }
 

@@ -27,6 +27,14 @@ return [
         'regenerate_interval' => 300,         // Régénérer ID toutes les 5 minutes
         'gc_maxlifetime' => 7200,             // 2 heures de durée max (cohérent avec lifetime=0)
         'login_url' => '/auth/login',         // URL de redirection après expiration
+        // Liaison de la session à l'IP cliente dans l'empreinte anti-vol :
+        //   'off'    = ne lie pas l'IP (le plus tolérant — recommandé en local/derrière proxy variable)
+        //   'subnet' = lie au sous-réseau (/24 IPv4, /64 IPv6) — bon compromis (défaut)
+        //   'strict' = lie à l'IP exacte (le plus strict, peut déconnecter si l'IP change)
+        'ip_binding' => 'subnet',
+        // Régénération sans supprimer immédiatement l'ancien ID (évite les courses
+        // avec les requêtes AJAX concurrentes qui causent des déconnexions aléatoires).
+        'regenerate_delete_old' => false,
     ],
 
     // ============================================
@@ -45,6 +53,8 @@ return [
             '/api/webhook/*',
             '/api/public/*',
             '/api/odin/metrics',   // ingestion agent O.D.I.N — authentifiée par clé API (X-ODIN-KEY)
+            '/marketplace/payment/paypal/webhook', // webhook PayPal — authentifié par signature (verifyWebhookSignature)
+            '/api/license/validate', // validation de licence — appelée par des sites tiers, authentifiée par clé + signature HMAC
         ],
     ],
 

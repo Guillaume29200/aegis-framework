@@ -68,6 +68,18 @@
     .col-lg-8 { flex: 0 0 66.666%; max-width: 66.666%; }
     .col-lg-9 { flex: 0 0 75%; max-width: 75%; }
 }
+@media (min-width: 1200px) {
+    .col-xl-2 { flex: 0 0 16.666%; max-width: 16.666%; }
+    .col-xl-3 { flex: 0 0 25%; max-width: 25%; }
+    .col-xl-4 { flex: 0 0 33.333%; max-width: 33.333%; }
+    .col-xl-5 { flex: 0 0 41.666%; max-width: 41.666%; }
+    .col-xl-6 { flex: 0 0 50%; max-width: 50%; }
+    .col-xl-7 { flex: 0 0 58.333%; max-width: 58.333%; }
+    .col-xl-8 { flex: 0 0 66.666%; max-width: 66.666%; }
+    .col-xl-9 { flex: 0 0 75%; max-width: 75%; }
+    .col-xl-10 { flex: 0 0 83.333%; max-width: 83.333%; }
+    .col-xl-12 { flex: 0 0 100%; max-width: 100%; }
+}
 .row-cols-1 > * { flex: 0 0 100%; max-width: 100%; }
 @media (min-width: 768px) {
     .row-cols-md-2 > * { flex: 0 0 50%; max-width: 50%; }
