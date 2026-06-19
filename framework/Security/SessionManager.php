@@ -21,7 +21,10 @@ class SessionManager
 {
     private array $config;
     private bool $started = false;
-    
+
+    /** Empêche la récursion lors du traitement d'une expiration de session. */
+    private static bool $handlingExpiry = false;
+
     public function __construct(array $config)
     {
         $this->config = $config['session'];
@@ -35,7 +38,16 @@ class SessionManager
         if ($this->started || session_status() === PHP_SESSION_ACTIVE) {
             return;
         }
-        
+
+        // Durcissement anti-fixation / anti-vol de session (avant session_start) :
+        //  - use_strict_mode : refuse un ID de session non généré par le serveur ;
+        //  - use_only_cookies : interdit l'ID de session passé dans l'URL ;
+        //  - use_trans_sid : ne jamais propager l'ID via l'URL.
+        @ini_set('session.use_strict_mode', '1');
+        @ini_set('session.use_only_cookies', '1');
+        @ini_set('session.use_trans_sid', '0');
+        @ini_set('session.cookie_httponly', '1');
+
         // Configuration cookies de session
         session_set_cookie_params([
             'lifetime' => $this->config['lifetime'],
@@ -68,18 +80,33 @@ class SessionManager
      */
     private function checkRegeneration(): void
     {
+        // Ne JAMAIS régénérer pendant une requête AJAX : avec le panel qui fait
+        // beaucoup de requêtes concurrentes (polling console/stats/stream), une
+        // requête en vol arriverait avec l'ancien ID juste régénéré → session
+        // perdue → déconnexion aléatoire. On régénère uniquement sur les pages.
+        if ($this->isAjaxRequest()) {
+            return;
+        }
+
         $now = time();
-        
+
         if (!isset($_SESSION['_last_regeneration'])) {
             $_SESSION['_last_regeneration'] = $now;
             return;
         }
-        
-        // Régénérer si interval dépassé
+
+        // Régénérer si interval dépassé (sans supprimer l'ancien ID par défaut,
+        // cf. regenerate_delete_old — évite les courses résiduelles).
         $elapsed = $now - $_SESSION['_last_regeneration'];
-        if ($elapsed > $this->config['regenerate_interval']) {
-            $this->regenerate();
+        if ($elapsed > (int)$this->config['regenerate_interval']) {
+            $this->regenerate((bool)($this->config['regenerate_delete_old'] ?? false));
         }
+    }
+
+    private function isAjaxRequest(): bool
+    {
+        return !empty($_SERVER['HTTP_X_REQUESTED_WITH'])
+            && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
     }
     
     /**
@@ -133,26 +160,23 @@ class SessionManager
      */
     private function handleSessionExpired(string $reason): void
     {
+        // Garde anti-récursion : destroy() puis un éventuel re-start()/validate()
+        // pouvait relancer cette méthode en boucle (Xdebug « infinite loop »).
+        // On ne traite l'expiration qu'une seule fois par requête.
+        if (self::$handlingExpiry) {
+            return;
+        }
+        self::$handlingExpiry = true;
+
         // Logger la raison (si logger disponible)
         error_log("Session expired: {$reason}");
-        
-        // Sauvegarder un message flash avant destruction
-        if (!isset($_SESSION['_flash'])) {
-            $_SESSION['_flash'] = [];
-        }
-        $_SESSION['_flash']['session_expired'] = true;
-        $_SESSION['_flash']['session_expired_reason'] = $reason;
-        
-        // Nettoyer les données utilisateur mais garder le flash
-        $flashData = $_SESSION['_flash'] ?? [];
-        
-        // Détruire la session
+
+        // Détruire la session expirée. On NE recrée PAS de session ici :
+        // le message d'expiration est porté par le paramètre ?session_expired=1
+        // (lu par la page de login), donc inutile de réamorcer une session
+        // (ce qui relançait validate() → boucle).
         $this->destroy();
-        
-        // Redémarrer avec le message flash
-        $this->start();
-        $_SESSION['_flash'] = $flashData;
-        
+
         // Rediriger vers login en respectant un sous-dossier d'installation (ex: /v4).
         $loginUrl = $this->resolveAppUrl($this->config['login_url'] ?? '/auth/login');
         
@@ -208,11 +232,63 @@ class SessionManager
     {
         $components = [
             $_SERVER['HTTP_USER_AGENT'] ?? '',
-            $this->getClientIP(),
+            $this->fingerprintIPPart(),
             $this->config['name']
         ];
-        
+
         return hash('sha256', implode('|', $components));
+    }
+
+    /**
+     * Composante IP de l'empreinte, selon le mode de liaison configuré.
+     * Normalise le localhost (::1 ↔ 127.0.0.1) — sinon le navigateur alterne
+     * IPv4/IPv6 en local et déconnecte aléatoirement (faux « hijacking »).
+     */
+    private function fingerprintIPPart(): string
+    {
+        $mode = $this->config['ip_binding'] ?? 'subnet';
+        if ($mode === 'off') {
+            return '';
+        }
+
+        $ip = $this->getClientIP();
+
+        // Localhost : toutes les variantes comptent comme la même origine.
+        if (in_array($ip, ['::1', '127.0.0.1', '0.0.0.0', ''], true)) {
+            return 'local';
+        }
+
+        if ($mode === 'strict') {
+            return $ip;
+        }
+
+        // 'subnet' : on ne lie qu'au sous-réseau (tolère les changements d'IP
+        // mineurs : équilibrage opérateur, bascule IPv4/IPv6 partielle…).
+        if (strpos($ip, ':') !== false) {            // IPv6 → ~/64 (4 premiers blocs)
+            return implode(':', array_slice(explode(':', $ip), 0, 4));
+        }
+        $parts = explode('.', $ip);                  // IPv4 → /24
+        if (count($parts) === 4) {
+            $parts[3] = '0';
+            return implode('.', $parts);
+        }
+        return $ip;
+    }
+
+    /** Secondes d'inactivité restantes avant expiration (pour le front). */
+    public function getIdleRemaining(): int
+    {
+        if (!$this->isLoggedIn() || !isset($_SESSION['_last_activity'])) {
+            return (int)($this->config['gc_maxlifetime'] ?? 7200);
+        }
+        $max = (int)($this->config['gc_maxlifetime'] ?? 7200);
+        return max(0, $max - (time() - (int)$_SESSION['_last_activity']));
+    }
+
+    /** Durée maximale d'inactivité configurée (secondes). */
+    public function getIdleMax(): int
+    {
+        return (int)($this->config['gc_maxlifetime'] ?? 7200);
     }
     
     /**

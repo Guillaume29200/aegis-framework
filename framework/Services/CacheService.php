@@ -43,7 +43,7 @@ class CacheService
             return $default;
         }
         
-        $data = @unserialize($content);
+        $data = @unserialize($content, ["allowed_classes" => false]);
         if ($data === false) {
             return $default;
         }
@@ -106,7 +106,7 @@ class CacheService
             return false;
         }
         
-        $data = @unserialize($content);
+        $data = @unserialize($content, ["allowed_classes" => false]);
         if ($data === false) {
             return false;
         }
@@ -223,7 +223,7 @@ class CacheService
             if ($file->isFile() && $file->getExtension() === 'cache') {
                 $content = @file_get_contents($file->getPathname());
                 if ($content !== false) {
-                    $data = @unserialize($content);
+                    $data = @unserialize($content, ["allowed_classes" => false]);
                     if ($data !== false && isset($data['expires_at']) && $data['expires_at'] < time()) {
                         if (@unlink($file->getPathname())) {
                             $count++;

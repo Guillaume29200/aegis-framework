@@ -65,9 +65,62 @@ class AdminMenuService
             }
         }
 
+        // Fusion par label : si deux modules déclarent un groupe de même libellé
+        // (ex. « Game Node Panel »), leurs enfants sont réunis sous un seul item.
+        // Permet à un module d'ajouter ses entrées dans le groupe d'un autre, tout
+        // en restant maître de sa visibilité (l'entrée disparaît s'il est désactivé).
+        $items = $this->mergeByLabel($items);
+
         usort($items, fn($a, $b) => ($a['position'] <=> $b['position']));
 
         return $items;
+    }
+
+    /**
+     * Fusionne récursivement les items partageant le même label (clé de
+     * regroupement insensible à la casse/aux espaces). Les enfants sont
+     * concaténés puis fusionnés à leur tour ; les autres propriétés (icône,
+     * position, url, match, mega) proviennent de la première occurrence.
+     *
+     * @param array<int, array<string, mixed>> $items
+     * @return array<int, array<string, mixed>>
+     */
+    private function mergeByLabel(array $items): array
+    {
+        $merged = [];
+        $index  = [];
+
+        foreach ($items as $item) {
+            $key = mb_strtolower(trim((string) $item['label']));
+
+            if (!isset($index[$key])) {
+                $index[$key] = count($merged);
+                $merged[]    = $item;
+                continue;
+            }
+
+            // Item déjà présent → réunir les enfants.
+            $pos = $index[$key];
+            $merged[$pos]['children'] = array_merge(
+                $merged[$pos]['children'] ?? [],
+                $item['children'] ?? []
+            );
+            // Conserver une URL/match si l'original n'en avait pas.
+            if (empty($merged[$pos]['url']) && !empty($item['url'])) {
+                $merged[$pos]['url'] = $item['url'];
+            }
+            $merged[$pos]['mega'] = $merged[$pos]['mega'] || !empty($item['mega']);
+        }
+
+        // Fusionner aussi les sous-groupes de chaque item.
+        foreach ($merged as &$item) {
+            if (!empty($item['children'])) {
+                $item['children'] = $this->mergeByLabel($item['children']);
+            }
+        }
+        unset($item);
+
+        return $merged;
     }
 
     /**

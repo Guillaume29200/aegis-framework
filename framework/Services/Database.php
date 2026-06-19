@@ -57,6 +57,10 @@ class Database
                 $this->pdo->exec("SET NAMES '{$this->config['charset']}'");
                 // Réinitialise sql_select_limit au cas où une conf WAMP le limiterait
                 $this->pdo->exec("SET SESSION sql_select_limit = DEFAULT");
+                // Force InnoDB pour TOUTE table créée par l'app : certains serveurs
+                // (WAMP) ont @@default_storage_engine=MyISAM, ce qui crée des tables
+                // sans clés étrangères et casse les contraintes (ex. installations).
+                try { $this->pdo->exec("SET SESSION default_storage_engine = 'InnoDB'"); } catch (\Throwable) {}
             }
             
         } catch (PDOException $e) {
@@ -184,10 +188,26 @@ class Database
     /**
      * Insérer et retourner ID
      */
+    /**
+     * Garde-fou anti-injection sur les IDENTIFIANTS (noms de table/colonne) des
+     * helpers insert/update/delete. Les VALEURS sont déjà liées par requête
+     * préparée ; ici on s'assure que les noms ne contiennent rien de dangereux
+     * (espace, guillemet, point-virgule, parenthèse, backtick, commentaire SQL).
+     * Les identifiants normaux (a-z, 0-9, _ et . pour table.colonne) passent.
+     */
+    private function guardIdentifier(string $identifier): string
+    {
+        if (!preg_match('/^[A-Za-z0-9_.]+$/', $identifier)) {
+            throw new \InvalidArgumentException("Identifiant SQL invalide : {$identifier}");
+        }
+        return $identifier;
+    }
+
     public function insert(string $table, array $data): int
     {
+        $this->guardIdentifier($table);
         // Construire requête
-        $columns = array_keys($data);
+        $columns = array_map([$this, 'guardIdentifier'], array_keys($data));
         $placeholders = array_fill(0, count($columns), '?');
         
         $sql = sprintf(
@@ -207,19 +227,20 @@ class Database
      */
     public function update(string $table, array $data, array $where): int
     {
+        $this->guardIdentifier($table);
         // Construire SET
         $sets = [];
         $values = [];
-        
+
         foreach ($data as $key => $value) {
-            $sets[] = "{$key} = ?";
+            $sets[] = $this->guardIdentifier($key) . " = ?";
             $values[] = $value;
         }
-        
+
         // Construire WHERE
         $conditions = [];
         foreach ($where as $key => $value) {
-            $conditions[] = "{$key} = ?";
+            $conditions[] = $this->guardIdentifier($key) . " = ?";
             $values[] = $value;
         }
         
@@ -238,11 +259,12 @@ class Database
      */
     public function delete(string $table, array $where): int
     {
+        $this->guardIdentifier($table);
         $conditions = [];
         $values = [];
-        
+
         foreach ($where as $key => $value) {
-            $conditions[] = "{$key} = ?";
+            $conditions[] = $this->guardIdentifier($key) . " = ?";
             $values[] = $value;
         }
         

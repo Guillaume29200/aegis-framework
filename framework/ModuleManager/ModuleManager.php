@@ -788,6 +788,23 @@ class ModuleManager
      */
     private function getCMSVersion(): string
     {
-        return '4.0.0'; // TODO: Charger depuis config
+        // Source unique de vérité : la version courante du changelog du framework.
+        static $cached = null;
+        if ($cached !== null) {
+            return $cached;
+        }
+        $cached = '4.0.0';
+        $file = (defined('ROOT_PATH') ? ROOT_PATH : dirname(__DIR__, 2)) . '/framework/changelog.json';
+        if (is_file($file)) {
+            $data = json_decode((string)@file_get_contents($file), true);
+            if (is_array($data) && !empty($data['version'])) {
+                // On compare sur le CŒUR numérique uniquement (ex. « 4.0.0-alpha.10 »
+                // → « 4.0.0 ») : sinon version_compare jugerait une pré-version
+                // INFÉRIEURE à 4.0.0 et les modules exigeant « >= 4.0.0 » ne
+                // pourraient plus s'activer pendant la phase alpha/beta.
+                $cached = preg_replace('/[-+].*$/', '', (string)$data['version']) ?: '4.0.0';
+            }
+        }
+        return $cached;
     }
 }
