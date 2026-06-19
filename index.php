@@ -12,6 +12,53 @@ declare(strict_types=1);
  */
 
 // ============================================
+// REDIRECTION VERS L'INSTALLEUR SI NON INSTALLÉ
+// (avant le bootstrap : sans .env/BDD, celui-ci échouerait)
+// Détection robuste + double sécurité (lock OU .env OU connexion BDD réelle).
+// ============================================
+if (PHP_SAPI !== 'cli') {
+    $aegisInstalled = static function (): bool {
+        // 1) Marqueur explicite de l'installeur
+        if (is_file(__DIR__ . '/install/installed.lock')) {
+            return true;
+        }
+        // 2) Fichier .env présent (installation configurée)
+        if (is_file(__DIR__ . '/.env')) {
+            return true;
+        }
+        // 3) Double sécurité : la config database.php pointe vers une base
+        //    réellement accessible ET contenant le schéma (table cœur 'users').
+        $cfg = @include __DIR__ . '/framework/config/database.php';
+        if (!is_array($cfg) || empty($cfg['database'])) {
+            return false;
+        }
+        try {
+            $dsn = "mysql:host={$cfg['host']};port={$cfg['port']};dbname={$cfg['database']};charset=utf8mb4";
+            $pdo = new PDO($dsn, (string)$cfg['username'], (string)$cfg['password'], [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_TIMEOUT => 3,
+            ]);
+            $stmt = $pdo->query("SHOW TABLES LIKE 'users'");
+            return $stmt !== false && $stmt->fetchColumn() !== false;
+        } catch (\Throwable $e) {
+            return false;
+        }
+    };
+
+    if (!$aegisInstalled()) {
+        $base = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/')), '/');
+        header('Location: ' . $base . '/install/');
+        exit;
+    }
+
+    // Install détectée mais marqueur absent → on le crée pour éviter de
+    // refaire la vérification BDD à chaque requête (best-effort, silencieux).
+    if (!is_file(__DIR__ . '/install/installed.lock')) {
+        @file_put_contents(__DIR__ . '/install/installed.lock', 'Détecté installé le ' . date('Y-m-d H:i:s') . "\n");
+    }
+}
+
+// ============================================
 // CHARGEMENT DU BOOTSTRAP
 // ============================================
 require_once __DIR__ . '/framework/bootstrap.php';
