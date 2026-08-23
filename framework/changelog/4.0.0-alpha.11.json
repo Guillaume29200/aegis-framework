@@ -1,0 +1,26 @@
+{
+    "date": "2026-06-25",
+    "title": "Page d'accueil publique configurable",
+    "groups": [
+        {
+            "title": "🏠 Choix de l'interface publique par défaut",
+            "items": [
+                {
+                    "text": "**Nouveau réglage** (Administration → Configuration → Général → « Page d'accueil par défaut ») : l'admin choisit vers quelle interface publique rediriger les visiteurs arrivant sur la racine du site (`/`)."
+                },
+                {
+                    "text": "La liste ne propose que les **modules actifs déclarant une interface publique** via la nouvelle clé `public_home` de leur `module.json` (ex. FPSMeter → `/fpsmeter`, Forum → `/forum`, Marketplace → `/marketplace`)."
+                },
+                {
+                    "text": "**Multi-site** : un même socle Aegis peut ainsi alimenter plusieurs sites différents (forum, marketplace, FPSMeter…) en changeant simplement la page d'accueil publique."
+                },
+                {
+                    "text": "**Repli sûr** : si aucun module public n'est disponible (Aegis fraîchement installé) ou si l'on choisit « Page de connexion (Auth) », la racine redirige automatiquement vers `/auth/login` — comportement par défaut inchangé."
+                },
+                {
+                    "text": "Implémentation : clé `public_home` dans `module.json`, `LandingService` (liste des options), réglage `default_landing` validé côté serveur, route racine `/` adaptée."
+                }
+            ]
+        }
+    ]
+}

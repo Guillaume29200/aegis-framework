@@ -1,0 +1,90 @@
+{
+    "date": "2026-07-04",
+    "title": "Capacités de module — Markdown, Cache, IA, RGPD, reCAPTCHA, Analytics & SEO mutualisés",
+    "groups": [
+        {
+            "title": "🧩 Capacités de module — une seule implémentation, tous les modules",
+            "items": [
+                {
+                    "text": "**Principe** : au lieu de recoder les mêmes briques (Markdown, Cache, IA, RGPD, reCAPTCHA, Analytics, SEO) dans chaque module, un module les **déclare** via `\"capabilities\": [...]` dans son `module.json` et le framework les **câble automatiquement** au runtime."
+                },
+                {
+                    "text": "**Tout se pilote depuis Configuration** : les réglages des capacités vivent au niveau du framework/Configuration, plus de sous-configuration dupliquée par module. Moins de code, aucun fichier recréé, un seul moteur partagé."
+                },
+                {
+                    "text": "**Registre unique** (`framework/Capabilities/CapabilityRegistry.php`) : source de vérité (nom, icône, description, disponibilité) pour l'UI du générateur ET le runtime. `sanitize()` ne retient que les capacités connues et disponibles."
+                },
+                {
+                    "text": "**Runtime** (`framework/Capabilities/CapabilityManager.php`) : `boot()` idempotent appelé après le chargement des modules (`ModuleManager::loadModules()`) ; charge les helpers des capacités déclarées par les modules actifs (échec isolé et journalisé, ne casse jamais le boot)."
+                }
+            ]
+        },
+        {
+            "title": "✍️ Markdown partagé (sécurisé)",
+            "items": [
+                {
+                    "text": "Moteur consolidé (`framework/Capabilities/Markdown/MarkdownService.php`) : échappement HTML global, `sanitizeUrl()` bloquant `javascript:`/`data:`, spoilers, tableaux, citations, blocs de code, YouTube. Classes CSS neutralisées en `.md-*`."
+                },
+                {
+                    "text": "Éditeur automatique (`assets/md-editor.js` + `md.css`) : se greffe sur tout `<textarea data-md>` (barre d'outils + aperçu)."
+                },
+                {
+                    "text": "Helpers globaux (`framework/Helpers/MarkdownHelper.php`) : `md_render()`, `md_editor_assets()`, `md_css()` — chargés uniquement si un module actif déclare la capacité `markdown`."
+                }
+            ]
+        },
+        {
+            "title": "⚡ Cache & 🤖 IA (adaptateurs sur l'existant)",
+            "items": [
+                {
+                    "text": "**Cache** : réutilise `CacheService` / `CacheHelper` déjà présents (`cache_remember()`, `cache_get/set`…). Aucun code dupliqué — la capacité ne fait que documenter l'usage et câbler la glue de génération."
+                },
+                {
+                    "text": "**IA** : réutilise `AIModelsHelper` (registre des modèles configurés dans Configuration → Modèles IA) : `ai_get_default_model()`, `ai_get_models()`…"
+                }
+            ]
+        },
+        {
+            "title": "🍪 RGPD, 🛡️ reCAPTCHA & 📊 Analytics (adaptateurs sur l'existant)",
+            "items": [
+                {
+                    "text": "**RGPD / Cookies** : nouveau helper `framework/Helpers/RgpdHelper.php` — `cookie_banner()` (rendu unique par requête, se masque si RGPD désactivé) et `rgpd_enabled()`, réutilisant le composant central `cookie-banner.php`. Piloté depuis Configuration → RGPD, sans réglage local au module."
+                },
+                {
+                    "text": "**reCAPTCHA** : réutilise `RecaptchaService` / `RecaptchaHelper` (script, `recaptcha_form_handler()`, vérification par zone). Ajout de `recaptcha_verify()` (bool) et `recaptcha_verify_details()` (tableau score/bypass) pour la vérification serveur. Configuré dans Configuration → Général."
+                },
+                {
+                    "text": "**Analytics** : nouveau helper `framework/Helpers/AnalyticsHelper.php` — `analytics_head()` injecte le tracker du module Analytics (vide s'il est absent/désactivé) et `analytics_enabled()`. Statistiques dans Administration → Analytics."
+                }
+            ]
+        },
+        {
+            "title": "🔎 SEO par page",
+            "items": [
+                {
+                    "text": "Nouveau helper `framework/Helpers/SeoHelper.php` — `seo_head(['title'=>…, 'description'=>…, 'image'=>…])` génère les balises `<title>`, `description`, `canonical`, Open Graph et Twitter Card d'une page, entièrement échappées. URLs rendues absolues automatiquement."
+                },
+                {
+                    "text": "Réutilise les **défauts site** (nom du site, image OG) de Configuration → SEO & médias via `seo_defaults()` ; fin des méta recodées dans chaque module. `seo_meta()` = raccourci qui affiche directement le bloc."
+                }
+            ]
+        },
+        {
+            "title": "🪄 Générateur de module — refonte UI/UX",
+            "items": [
+                {
+                    "text": "Nouvelle carte **🧩 Fonctionnalités** : capacités disponibles cochables (avec compteur en direct) et section « bientôt disponibles » grisée, chacune avec nom + explication."
+                },
+                {
+                    "text": "Bandeau pédagogique mettant en avant la **centralisation via Configuration** (fin des sous-configurations par module) ; capacités disponibles cochables (compteur en direct) et section « bientôt » séparée."
+                },
+                {
+                    "text": "Glue de génération : si `markdown` coché → `<textarea data-md>` + `md_editor_assets()` ; si `cache` → `getStats()` enveloppé dans `cache_remember()` ; si `ai` → carte du modèle par défaut ; si `rgpd`/`recaptcha` → carte « Capacités actives » rappelant le mode d'emploi. La sélection est écrite dans `module.json.capabilities`."
+                },
+                {
+                    "text": "**Non rétroactif** : les modules existants ne sont pas repris ; le système s'applique aux **futurs** modules générés."
+                }
+            ]
+        }
+    ]
+}

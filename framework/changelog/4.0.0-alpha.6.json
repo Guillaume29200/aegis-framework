@@ -1,0 +1,102 @@
+{
+    "date": "2026-05-30",
+    "title": "Renommage Aegis Framework + Centre de sécurité",
+    "groups": [
+        {
+            "title": "🏷️ Renommage — Aegis Framework",
+            "items": [
+                {
+                    "text": "Toutes les références **eSport-CMS / ESPORT-CMS / ESPORTCMS / ESPORT_CMS** remplacées par **Aegis Framework / AEGIS_FRAMEWORK** sur l'ensemble du code (76 remplacements, 54 fichiers). La **constante de garde** `ESPORT_CMS` → `AEGIS_FRAMEWORK` (define + tous les `defined()` modifiés ensemble), les libellés affichés, les domaines/e-mails (`esport-cms` → `aegis-framework`), docs incluses.",
+                    "sub": false
+                }
+            ]
+        },
+        {
+            "title": "🐛 Correctif connexion",
+            "items": [
+                {
+                    "text": "**`Auth::checkRememberMe()`** utilisait `$this->db` (inexistant sur un module) → erreur fatale « Undefined property: Auth\\\\Auth::$db » dès qu'un cookie « se souvenir de moi » était présent, ce qui cassait la page de connexion. La base est désormais récupérée via le conteneur global avec garde-fou.",
+                    "sub": false
+                }
+            ]
+        },
+        {
+            "title": "🛡️ Centre de sécurité — Phase 1 (fondation)",
+            "items": [
+                {
+                    "text": "Nouveau **`SecurityCenterService`** (cerveau), construit **sur** le `SecurityFirewallService` existant (enforcement/blocage déjà câblé dans le pipeline).",
+                    "sub": false
+                },
+                {
+                    "text": "**Catalogue de 27 détecteurs** répartis en 6 catégories (🌐 Web, 🔍 Scans, 🔐 Auth/Sessions, 📤 Uploads, 🚦 Anti-abus, 🖥️ Admin), chacun avec **gravité** (info/faible/moyen/élevé/critique) et **score de menace** — administrable.",
+                    "sub": false
+                },
+                {
+                    "text": "**Score de menace par IP** + niveaux (0–25 Faible, 26–50 Moyen, 51–75 Élevé, 76–100+ Critique) avec **blocage automatique** : seuil (défaut **100 pts → 24 h**) et seuil critique (défaut **300 pts → permanent**), configurables.",
+                    "sub": false
+                },
+                {
+                    "text": "**Listes IP administrables** : liste blanche (jamais bloquée, déblocage auto à l'ajout) en base + liste noire (blocage permanent manuel) et blocage temporaire.",
+                    "sub": false
+                },
+                {
+                    "text": "**Configuration complète** : activation globale, activation par catégorie, seuils, durée de blocage, rétention de l'historique.",
+                    "sub": false
+                },
+                {
+                    "text": "**Nouvelles tables** : `security_settings`, `security_rules` (27 règles seedées), `security_threat_scores`, `security_ip_whitelist` ; colonnes `category`/`score`/`rule_key` ajoutées à `security_events` (idempotent).",
+                    "sub": false
+                },
+                {
+                    "text": "**Page admin refondue** (`/admin/security`) en UI maison à onglets : 📊 Tableau de bord (KPI, événements par catégorie, top IP par score), 🧩 Détecteurs (toggle par catégorie/détecteur, score, gravité), ⚙️ Seuils & config, 📋 Listes IP (blanche/noire/blocages), 🧾 Historique (filtres + purge). Contrôleur + routes dédiés.",
+                    "sub": false
+                }
+            ]
+        },
+        {
+            "title": "🛡️ Centre de sécurité — Phase 2 (détecteurs réels)",
+            "items": [
+                {
+                    "text": "**Moteur de détection HTTP** (`SecurityCenterService::inspectHttpRequest()`) + middleware **`SecurityCenterDetector`** branché dans le pipeline juste après le firewall. Analyse la **surface URL** (chemin + query string + User-Agent) — **jamais les corps POST**, pour éviter les faux positifs sur les contenus légitimes (forum, réglages…). Blocage immédiat (403) si un seuil est franchi.",
+                    "sub": false
+                },
+                {
+                    "text": "**Batch 1 — surface URL (17 détecteurs)** : `path_traversal`, `lfi`, `rfi`, `sql_injection`, `xss_attempt` (🌐) ; `git_probe`, `env_probe`, `backup_probe`, `sensitive_file_probe`, `cms_scan`, `scanner_detected`, `directory_scan` (🔍) ; `admin_panel_probe` (🖥️, exclut notre propre `/admin`) ; `suspicious_ua`, `suspicious_pattern` (🚦). Testé : 15/15 (attaques détectées, **zéro faux positif** sur `/admin`, `/forum`, `/auth`, assets).",
+                    "sub": false
+                },
+                {
+                    "text": "**Batch 2 — Authentification** : `csrf_attack` (échec de token sur login), `brute_force` (échec d'identifiants), `auth_flood` (limite de tentatives atteinte) signalés depuis `AuthController` via le conteneur global (`$GLOBALS['securityCenterService']`, couplage souple — la sécurité ne peut jamais casser l'authentification).",
+                    "sub": false
+                },
+                {
+                    "text": "**Batch 3 — Uploads, Session, Rate-limit** :",
+                    "sub": false
+                },
+                {
+                    "text": "**Uploads** (inspection centralisée dans le middleware sur `$_FILES`, basée sur noms/extensions) : `malicious_upload` (webshells connus : shell.php, c99, r57…), `double_extension` (ex. `image.jpg.php`), `executable_upload` (.php/.phtml/.exe/.sh/.py…). Faible taux de faux positifs (les uploads légitimes sont images/docs/archives).",
+                    "sub": true
+                },
+                {
+                    "text": "**Session** : `session_hijacking` — `SessionManager` pose un drapeau global à la divergence d'empreinte (IP/User-Agent), relevé par le middleware (score 50 = critique).",
+                    "sub": true
+                },
+                {
+                    "text": "**Pont rate-limit** : les détections de `SecurityFirewallService` alimentent désormais le score (`rate_limit_exceeded`, ou `request_flood` si dépassement > ×3) via un *sink* branché dans bootstrap.",
+                    "sub": true
+                },
+                {
+                    "text": "**Bilan : 24 des 27 détecteurs actifs.** Non déclenchés volontairement : `clickjacking` (déjà neutralisé par l'en-tête `X-Frame-Options`), `account_enumeration` (l'app ne divulgue pas l'existence des comptes — messages d'erreur uniformes), `invalid_session` (faible surface) — conservés au catalogue, administrables.",
+                    "sub": false
+                },
+                {
+                    "text": "Correctif : suppression de la dernière mention « Protection GSH » (page de blocage du firewall) → « Aegis Framework ».",
+                    "sub": false
+                }
+            ]
+        }
+    ],
+    "types": [
+        "feature",
+        "security"
+    ]
+}

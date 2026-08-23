@@ -1,0 +1,52 @@
+{
+    "date": "2026-06-06",
+    "title": "Menus : greffe inter-modules + Tickets alloué à GNP",
+    "groups": [
+        {
+            "title": "🧩 Fusion de menus par label (`AdminMenuService`)",
+            "items": [
+                {
+                    "text": "`AdminMenuService::build()` **fusionne désormais les items de même `label`** (insensible à la casse/aux espaces) : leurs `children` sont réunis sous un seul item (fusion **récursive** des sous-groupes), les autres propriétés (icône, position, `mega`) venant de la première occurrence.",
+                    "sub": false
+                },
+                {
+                    "text": "Permet à un module de **greffer ses entrées dans le groupe d'un autre** sans le modifier, tout en gardant la maîtrise de leur visibilité (l'entrée disparaît si **son** module est désactivé). Idéal pour les **add-ons** (notamment payants) qui se logent dans un module hôte.",
+                    "sub": false
+                },
+                {
+                    "text": "Documenté dans `FRAMEWORK.md` (Menu d'administration) et la doc publique (`doc-theme.php` → « Greffer dans le menu d'un autre module »).",
+                    "sub": false
+                }
+            ]
+        },
+        {
+            "title": "🎫 Module Tickets alloué à GameNodePanel",
+            "items": [
+                {
+                    "text": "Entrée de menu **greffée dans le méga-menu GNP** (groupe « Support → Tickets ») via la fusion par label ; plus d'entrée de premier niveau. Clé `category: \"Game Node Panel\"` pour le regroupement sur la page Modules.",
+                    "sub": false
+                },
+                {
+                    "text": "**Corrections** : tables `gsh_*` → `gnp_*` (jointures cassées par le renommage), création effective des tables (`support_tickets`/`support_ticket_messages`, type FK `game_server_id` aligné sur `gnp_game_servers.id`), constant `ESPORT_CMS` → `AEGIS_FRAMEWORK`, header admin obsolète → helpers `admin_header()/admin_footer()`.",
+                    "sub": false
+                },
+                {
+                    "text": "**Sécurité** : audit OK (auth, CSRF sur tous les POST, IDOR via `getByIdForUser`/`userOwnsGameServer`, requêtes préparées, XSS échappé) + **anti-spam** (quota de tickets ouverts, délai mini entre créations/réponses).",
+                    "sub": false
+                }
+            ]
+        },
+        {
+            "title": "🛡️ Forum",
+            "items": [
+                {
+                    "text": "Audit confirmé (CSRF complet, `.htaccess` uploads, `afPost` auto-CSRF). Migration progressive des vues admin `.af-*` → `.ui-*` natif (en cours, manuelle, vue par vue).",
+                    "sub": false
+                }
+            ]
+        }
+    ],
+    "types": [
+        "feature"
+    ]
+}

@@ -1,0 +1,221 @@
+{
+    "date": "2026-08-23",
+    "title": "Première bêta : socle de templates, capacités réelles, 2FA et supervision",
+    "types": [
+        "release",
+        "feature",
+        "security",
+        "fix"
+    ],
+    "groups": [
+        {
+            "title": "🖼️ Moteur de templates promu dans le framework",
+            "items": [
+                {
+                    "text": "Le moteur de gabarits, le gestionnaire de thèmes et le magasin de réglages quittent les modules pour rejoindre `Framework\\Templating` : `TemplateEngine`, `ThemeManager`, `ThemeSettings` et l'interface `SettingsStore`. GameNodeEsport et GameNodeHosting en avaient chacun leur copie."
+                },
+                {
+                    "text": "Un thème est désormais **un dossier** : `themes/<clé>/` avec son `meta.json`, ses gabarits `.html` et un `assets/` contenant toujours `css`, `js`, `images` et `uploads`. Il se zippe, se partage et s'installe tel quel."
+                },
+                {
+                    "text": "Un thème ne contient **aucun PHP** — la syntaxe ne sait ni comparer, ni calculer, ni appeler une fonction. En téléverser un ne peut donc pas exécuter de code sur le serveur."
+                },
+                {
+                    "text": "Un gabarit absent du thème actif est repris du thème de repli : un thème incomplet donne une page complète plutôt qu'une page blanche."
+                },
+                {
+                    "text": "GameNodeEsport migré : son service de thèmes passe de 490 à 137 lignes, à sortie rendue identique à l'octet près."
+                }
+            ]
+        },
+        {
+            "title": "🧱 Les capacités font enfin quelque chose",
+            "items": [
+                {
+                    "text": "**Correctif majeur** : cocher « RGPD / Cookies » chargeait bien `cookie_banner()`, mais personne ne l'appelait — le bandeau ne s'affichait jamais. Idem pour SEO, Analytics et reCAPTCHA. La capacité était documentée, pas câblée."
+                },
+                {
+                    "text": "Nouveau `Framework\\Capabilities\\CapabilityOutput` : il rassemble ce qui va dans le `<head>` et avant `</body>`, et le rend sous forme de chaînes que le gabarit pose via `{{{ head_extra }}}` et `{{{ body_end }}}`."
+                },
+                {
+                    "text": "Nouvelle capacité **⚡ TurboNav** : navigation AJAX sur les pages publiques d'un module. Elle reste en veille tant que TurboNav n'est pas activé dans Configuration — le choix appartient à l'administrateur, pas au module."
+                },
+                {
+                    "text": "Motif imposé au code généré : `function_exists('cache_remember')` avant usage. Une capacité **améliore** le fonctionnement, elle ne le conditionne jamais."
+                }
+            ]
+        },
+        {
+            "title": "🪄 Générateur de module",
+            "items": [
+                {
+                    "text": "Nouveau bloc « Moteur de templates » : répondre oui à « ce module aura-t-il une partie publique ? » produit un thème complet, son administration (thème actif, téléversement ZIP, options générées depuis `meta.json`) et les pages visiteur."
+                },
+                {
+                    "text": "Choix de gabarits à la génération : liste + fiche, avec pagination, avec recherche."
+                },
+                {
+                    "text": "Le préfixe public est **validé** : un segment réservé par le cœur ou déjà pris par un autre module est refusé, en nommant le module fautif."
+                },
+                {
+                    "text": "Correctifs de génération : accents dans les noms de section (« Éléments » produisait `/lements`), sur-échappement rendant le PHP non analysable, `default:` avec un chemin dans l'en-tête généré."
+                },
+                {
+                    "text": "Nouveau module **Exemple**, livré inactif : toutes les cases cochées, en état de marche, à lire comme référence."
+                }
+            ]
+        },
+        {
+            "title": "📊 Supervision et tableau de bord",
+            "items": [
+                {
+                    "text": "Le tableau de bord ne parle plus seulement des utilisateurs : bandeau de santé agrégeant le diagnostic et les mises à jour en attente, activité récente du journal d'audit, environnement, connexions des dernières 24 h, stockage et audience."
+                },
+                {
+                    "text": "Nouvelles **jauges CPU / mémoire en direct**, sur le tableau de bord et le monitoring. Rafraîchies toutes les 5 secondes, **aucune écriture en base**, et l'interrogation s'arrête quand l'onglet passe en arrière-plan."
+                },
+                {
+                    "text": "Windows et Linux. Sous Windows, `Win32_Processor.LoadPercentage` met 1 200 ms et `PerfFormattedData` plus de 11 secondes : on lit les compteurs **bruts** (55 ms) et on calcule la différence. Sous Linux, `/proc/stat` et `/proc/meminfo`."
+                },
+                {
+                    "text": "Nouvel indicateur de **mises à jour de modules** dans l'en-tête d'administration : l'information n'existait que dans le diagnostic, page qu'il fallait penser à ouvrir."
+                },
+                {
+                    "text": "Page Monitoring : **2 265 ms → 46 ms**. Un seul relevé était en cause, le calcul des tailles de dossiers ; il est mémorisé 5 minutes."
+                }
+            ]
+        },
+        {
+            "title": "🔒 Sécurité et fiabilité",
+            "items": [
+                {
+                    "text": "**Filtrage géographique** (Centre de sécurité → Pays) : liste noire ou liste blanche, interrupteur global, page de refus en anglais avec code 403. La liste blanche est la plus étanche quand le public du site est connu d'avance — ce qui n'est pas prévu est refusé, sans avoir à énumérer le reste du monde."
+                },
+                {
+                    "text": "La correspondance IP → pays est **entièrement locale** : `Framework\\Services\\CountryDatabase` convertit les fichiers d'attribution des cinq registres régionaux (RIPE, ARIN, APNIC, AFRINIC, LACNIC — 27 Mo, sans compte ni clé) en un fichier binaire de 2,5 Mo couvrant 260 903 plages et 239 pays."
+                },
+                {
+                    "text": "Interroger une API de géolocalisation par requête entrante aurait fait de la protection un amplificateur : sous attaque, chaque requête hostile aurait déclenché une connexion sortante depuis le serveur, et les quotas des services gratuits (45 appels/minute) auraient rendu le filtre aveugle dès que le trafic monte."
+                },
+                {
+                    "text": "Un index par premier octet ramène la recherche à **une seule lecture** : 0,52 ms avec une dichotomie classique sur 260 000 plages, **0,13 ms** avec l'index. Aucune requête SQL, aucun appel réseau, rien chargé en mémoire."
+                },
+                {
+                    "text": "Trois garde-fous, parce que se fermer soi-même la porte est l'erreur facile ici : un **pays inconnu n'est jamais bloqué** (base absente, IPv6, plage non attribuée), un **administrateur connecté non plus**, et l'enregistrement est **refusé** si la configuration bloquerait le pays de l'administrateur — ou si la liste est vide."
+                },
+                {
+                    "text": "Greffé sur le pare-feu existant plutôt que doublé à côté : même résolution d'adresse client (Cloudflare et relais compris) et même liste blanche d'IP. Une seconde implémentation aurait fini par diverger, et diverger ici signifie bloquer le mauvais visiteur."
+                },
+                {
+                    "text": "**Code de secours 2FA**, remis à l'activation et affiché une seule fois. Il s'emploie depuis la page de vérification elle-même et désactive la double authentification : si l'envoi d'e-mail tombe, la page qui permettrait de couper la protection est justement derrière la protection. Le remède ne pouvait pas vivre derrière la porte qu'il ouvre — et n'exige donc jamais de passer par phpMyAdmin."
+                },
+                {
+                    "text": "Le code de secours n'est conservé que sous forme d'empreinte, se consomme à l'usage, tolère minuscules et tirets absents (il se recopie à la main), et son emploi part au journal d'audit. Régénérable depuis l'administration, l'ancien cessant aussitôt de valoir."
+                },
+                {
+                    "text": "**Filtrage des domaines d'adresse e-mail à l'inscription** (Configuration → Domaines e-mail) : liste blanche de 34 fournisseurs plutôt que liste noire de jetables. Interdire les jetables suppose de tous les connaître, il en naît chaque semaine et la liste est périmée dès qu'on la fige ; une liste blanche refuse d'office tout ce qui naîtra demain."
+                },
+                {
+                    "text": "La liste est modifiable — un domaine propre s'y ajoute, et les sous-domaines d'un domaine autorisé passent automatiquement. Activer avec une liste vide est refusé : cela fermerait le site aux inscriptions. Un testeur d'adresse permet de vérifier le réglage sans attendre qu'un visiteur se heurte au filtre."
+                },
+                {
+                    "text": "**Double authentification par e-mail**, activable depuis Configuration → 2FA. Le bloc `2fa` de `config/security.php` portait le commentaire « À activer quand implémenté » depuis l'origine : c'est fait. Code à 6 chiffres, valable 10 minutes, à usage unique, bloqué après 5 essais. Aucun SMS — le détournement de carte SIM en fait le facteur le plus faible."
+                },
+                {
+                    "text": "Le contrôle du second facteur s'insère **avant** la création de la session : tant que le code n'est pas validé, aucune session authentifiée n'existe et aucune adresse ne peut être atteinte."
+                },
+                {
+                    "text": "**La politique de mot de passe est enfin appliquée.** `config/security.php` annonçait 12 caractères, majuscule, chiffre et caractère spécial ; aucune de ces clés n'était lue, et la seule règle réelle était un `strlen < 8` recopié à deux endroits. Nouveau `Framework\\Security\\PasswordPolicy`, source unique pour l'inscription et la réinitialisation."
+                },
+                {
+                    "text": "Les mots de passe figurant dans une fuite connue sont refusés, via le protocole k-anonymity de Have I Been Pwned : seuls 5 caractères de l'empreinte SHA-1 quittent le serveur. `Password123!` respectait toutes les règles de forme et passait ; il est désormais rejeté."
+                },
+                {
+                    "text": "`max_age_days` et `prevent_reuse` retirés de la configuration plutôt qu'implémentés : la rotation périodique imposée est déconseillée par le NIST (SP 800-63B §5.1.1.2), elle pousse à décliner un même mot de passe."
+                },
+                {
+                    "text": "Nouveau `Framework\\Services\\Mailer` : l'envoi de courriel n'existait nulle part, chaque appelant reconstruisait ses en-têtes autour de `mail()`. Un seul point d'entrée, donc un seul endroit à modifier le jour où SMTP authentifié sera nécessaire."
+                },
+                {
+                    "text": "La page de configuration vérifie l'envoi en **ouvrant réellement la connexion** au serveur SMTP, et propose un envoi de test. Lire la directive `SMTP` ne suffisait pas : WAMP la remplit avec `localhost` sans que rien n'écoute, ce qui aurait fait activer le 2FA sur une machine incapable d'expédier les codes."
+                },
+                {
+                    "text": "Nouveau `Framework\\Storage\\ImageUploader`, unique point d'entrée pour les images reçues : taille plafonnée, type lu dans le contenu et non dans le nom, **ré-encodage GD** qui purge toute charge dissimulée, SVG refusé sauf demande explicite, dossier durci par `.htaccess`."
+                },
+                {
+                    "text": "Installation d'un thème par ZIP : refus des chemins remontants, des extensions non listées — aucune n'est exécutable — et des archives sans `meta.json` racine. Le contrôle a lieu **avant extraction**."
+                },
+                {
+                    "text": "Le Centre de sécurité annonce désormais quand l'adresse du visiteur est en **liste blanche** : `127.0.0.1` y figure par défaut, ce qui donnait une page vide et l'impression que rien ne fonctionnait."
+                },
+                {
+                    "text": "La version d'un module est lue depuis son `module.json` au lieu d'être codée en dur : plusieurs modules annonçaient une version dans leur manifeste et une autre dans leur code."
+                }
+            ]
+        },
+        {
+            "title": "🐛 Correctifs",
+            "items": [
+                {
+                    "text": "Réglages du filtrage géographique lus dans `settings` alors que le Centre de sécurité les écrit dans `security_settings` : l'enregistrement n'aurait eu aucun effet. Détecté avant publication."
+                },
+                {
+                    "text": "**« Voir » et « Supprimer » répondaient « Fichier introuvable » sur tous les journaux** : même chemin fautif que le résumé, à deux endroits de plus. Le commentaire disait encore « framework/Controllers » alors que le contrôleur avait déménagé dans `modules/System/Controllers`."
+                },
+                {
+                    "text": "Les fichiers de logs se parcourent 10 par 10, avec un filtre par nom. Tout est déjà rendu dans la page : changer de page ne déclenche ni requête ni rechargement."
+                },
+                {
+                    "text": "**Le journal ne consignait presque que du bruit** : sur 912 entrées CRITICAL, 756 étaient de simples pages introuvables et 29 des jetons CSRF périmés — 95 % de bruit qui masquait la quinzaine de vraies pannes. Un 404 n'est plus journalisé, un jeton périmé passe en avertissement."
+                },
+                {
+                    "text": "Le filet était troué dans l'autre sens : `catch (\\Exception)` laissait passer tout ce qui hérite de `\\Error` — TypeError, appel de méthode inexistante. Les pannes les plus graves étaient les seules à n'être jamais consignées. Élargi à `\\Throwable`."
+                },
+                {
+                    "text": "**HEAD renvoyait 404 sur la page d'accueil** : le routeur ne connaissait que GET. Supervision, vérificateurs de liens et robots d'indexation recevaient une erreur. HEAD est désormais résolu comme GET, conformément à la norme HTTP."
+                },
+                {
+                    "text": "Résumé des logs fichiers figé à « 0 fichier, 0 o » : le chemin était calculé depuis le dossier du service et désignait `modules/System/logs`, inexistant. Il pointe sur `framework/logs` — 24 fichiers, 344 Ko."
+                },
+                {
+                    "text": "Une session expirée par inactivité n'est plus écrite dans `php_error.log` : c'est le comportement attendu, pas une erreur."
+                },
+                {
+                    "text": "Le fichier d'erreurs de PHP peut être vidé depuis l'interface ; le bouton de purge de la table `logs` a rejoint la table qu'il vide, au lieu de rester dans un panneau voisin."
+                },
+                {
+                    "text": "Attribut `hidden` écrasé par les règles `display` des thèmes : les blocs masqués par JavaScript restaient visibles, et le filtrage d'une liste ne masquait rien."
+                },
+                {
+                    "text": "En-tête d'administration : `position: sticky` et `z-index` défaits par une règle groupée. L'en-tête ne collait plus, et les menus déroulants passaient **sous** le contenu."
+                },
+                {
+                    "text": "Listes de liens des thèmes : `is_external` absent et chemins internes non préfixés — ils cassaient au moindre renommage du préfixe public. Un thème livré avec des liens par défaut n'en affichait aucun."
+                },
+                {
+                    "text": "Débordement horizontal de l'en-tête public sur mobile, sur toutes les pages du thème GoldGaming."
+                },
+                {
+                    "text": "Page des versions : les entrées n'avaient aucun numéro et s'affichaient toutes en « v? »."
+                }
+            ]
+        },
+        {
+            "title": "📘 Documentation",
+            "items": [
+                {
+                    "text": "Deux pages neuves : **Moteur de templates & thèmes publics** et **Fonctionnalités & capacités**, qui n'existaient nulle part."
+                },
+                {
+                    "text": "Nouvelles rubriques **GameNodeHosting** (7 pages) et **GameNodeEsport** (6 pages), avec un comparatif sourcé face à NeoFrag et Contentify."
+                },
+                {
+                    "text": "Le support par tickets, anciennement extension payante de GameNodePanel, est intégré à GameNodeHosting **sans surcoût** ; son ancienne adresse redirige en 301."
+                },
+                {
+                    "text": "15 liens cassés corrigés dans la rubrique AegisHost."
+                }
+            ]
+        }
+    ]
+}

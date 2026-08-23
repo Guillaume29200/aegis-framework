@@ -1,0 +1,41 @@
+{
+    "date": "2026-07-15",
+    "title": "Header : menu adaptatif « Plus », Configuration toujours dernier",
+    "groups": [
+        {
+            "title": "🧭 Barre de navigation adaptative (priority+)",
+            "items": [
+                {
+                    "text": "En mode topbar, le menu tenait sur plusieurs lignes et débordait du header dès qu'assez de modules étaient actifs. Il tient désormais sur **une seule ligne** : les entrées qui ne rentrent plus sont automatiquement déplacées dans un menu **« ⋯ Plus (n) »** en fin de barre (pattern priority+)."
+                },
+                {
+                    "text": "Recalcul dynamique au redimensionnement (ResizeObserver) et après chaque navigation TurboNav. Dans « Plus », chaque module est déplié en liste verticale scrollable (plus de mega-menu tronqué ni de débordement horizontal qui décalait la page)."
+                }
+            ]
+        },
+        {
+            "title": "⚙️ Ordre du menu",
+            "items": [
+                {
+                    "text": "L'entrée **Configuration est désormais TOUJOURS forcée en dernière position** (`AdminMenuService::build()`), quelles que soient les positions déclarées par les modules. Le tri par position reste respecté pour toutes les autres entrées (usort stable)."
+                }
+            ]
+        },
+        {
+            "title": "🚀 Tableau de bord",
+            "items": [
+                {
+                    "text": "Nouveau bloc « Tableaux de bord des modules » sous « Accès rapides » : un bouton par module activé, généré dynamiquement depuis le menu admin (apparaît/disparaît avec l'activation du module)."
+                }
+            ]
+        },
+        {
+            "title": "🧰 Regroupement des actions rapides du header",
+            "items": [
+                {
+                    "text": "[Demandé par l'utilisateur] Assistant IA, thème clair/sombre et plein écran prenaient chacun leur propre icône dans le header — regroupés dans un nouveau menu déroulant **« Outils »** (icône 🛠️), qui reprend aussi Réglages et Apparence (déplacés depuis le menu utilisateur). Le menu utilisateur ne garde plus que Espace membre et Déconnexion."
+                }
+            ]
+        }
+    ]
+}

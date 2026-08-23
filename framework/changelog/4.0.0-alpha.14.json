@@ -1,0 +1,39 @@
+{
+    "date": "2026-07-21",
+    "title": "TurboNav : cache avec TTL, formulaires GET interceptés, header prefetch exploitable ; fix analytics_head() sur module désactivé",
+    "groups": [
+        {
+            "title": "⚡ TurboNav v2.1.0",
+            "items": [
+                {
+                    "text": "[Demandé par l'utilisateur] Cache avec expiration (TTL 45s, configurable) : une page revisitée dans la fenêtre de cache (jusqu'à 20 pages) n'affiche plus des chiffres figés (compteurs, notifications en attente…) — passé le TTL, elle est re-fetchée normalement."
+                },
+                {
+                    "text": "[Demandé par l'utilisateur] Les formulaires `method=\"get\"` (filtres/recherche) sont désormais interceptés comme les liens : soumission convertie en navigation TurboNav au lieu d'un rechargement complet. Opt-out via `data-no-turbonav`/`data-no-turbo` sur le `<form>`, comme pour les liens."
+                },
+                {
+                    "text": "[Demandé par l'utilisateur] Nouveau helper PHP global `is_turbonav_prefetch(): bool` (bootstrap.php) : toute route GET avec effet de bord peut désormais l'appeler pour sauter cet effet lors d'un simple survol (préchargement), sans attendre un vrai clic."
+                }
+            ]
+        },
+        {
+            "title": "🐛 TurboNav v2.0.1 — préchargement au survol fiabilisé, compatibilité doc officielle",
+            "items": [
+                {
+                    "text": "[Bug remonté par l'utilisateur — audit turbo-nav.js] `mouseleave` était écouté en phase de capture sur tout le document sans vérifier quel élément était réellement quitté. Sur un lien du type `<a>🏆 Tournois</a>` (motif dominant du menu admin), le moindre micro-mouvement de souris entre l'icône et le texte déclenchait un `mouseleave` sur l'enfant et annulait le timer de préchargement avant les 80ms — rendant la fonctionnalité phare de TurboNav v2 quasiment inopérante sur la majorité des liens du menu. Le timer n'est désormais annulé que si la souris quitte réellement le lien qui l'a démarré (comparaison avec l'ancre trackée, pas un `mouseleave` global)."
+                },
+                {
+                    "text": "L'attribut d'exclusion documenté sur gamenodepanel.com est `data-no-turbo`, alors que le code (et tout le reste du framework) utilise `data-no-turbonav`. Les deux sont désormais acceptés en alias pour éviter qu'un lien exclu selon la doc officielle continue d'être intercepté silencieusement."
+                }
+            ]
+        },
+        {
+            "title": "🐛 analytics_head() ignorait l'état d'activation du module Analytics",
+            "items": [
+                {
+                    "text": "[Bug remonté par l'utilisateur] Désactiver le module Analytics ne suffisait pas : `analytics_head()` (capacité partagée, utilisée par d'autres modules pour injecter le tracker sur leurs pages) ne vérifiait que la classe autoloadable et le réglage `analytics_settings.enabled` — jamais si le module lui-même était actif. Résultat : le `<script src=\"/analytics/a.js\">` continuait d'être injecté, pointant vers une route non enregistrée (module inactif) → 404 loggé en CRITICAL à chaque page vue. Ajout de la vérification `module_active('Analytics')`."
+                }
+            ]
+        }
+    ]
+}

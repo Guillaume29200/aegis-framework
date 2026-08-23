@@ -1,0 +1,94 @@
+{
+    "date": "2026-05-30",
+    "title": "Pages d’authentification, RGPD avancé & SEO",
+    "groups": [
+        {
+            "title": "🔐 Pages d'authentification + suppression de Bootstrap",
+            "items": [
+                {
+                    "text": "**Login, inscription, mot de passe oublié, réinitialisation** réécrits en UI maison autonome (CSS partagé `auth/_head.php`, zéro Bootstrap/jQuery/plugin) : layout visuel + formulaire, interrupteur « se souvenir », alertes, reCAPTCHA et bannière cookies conservés. Favicon injecté si défini.",
+                    "sub": false
+                },
+                {
+                    "text": "**Bootstrap & dépendances supprimés définitivement** : `bootstrap.min.css`, `bootstrap-extended.css`, `bootstrap.bundle.min.js`, `jquery.min.js`, `app.css/js`, `pace`, anciens thèmes (`dark-theme`, `semi-dark`, `header-colors`), `index/index2/index3/widgets.js` et tout le dossier `assets/plugins/` (simplebar, perfect-scrollbar, metismenu, vectormap, chartjs). Conservés : `assets/css/icons.css` (boxicons), `assets/css/admin/`, `assets/js/admin/`, `assets/js/turbo-nav.js`.",
+                    "sub": false
+                }
+            ]
+        },
+        {
+            "title": "🍪 RGPD avancé (conforme CNIL)",
+            "items": [
+                {
+                    "text": "Page RGPD enrichie : **position** (haut/bas), **durée de validité** du consentement (30→395 j, max légal CNIL 13 mois), lien politique de confidentialité, titre/texte.",
+                    "sub": false
+                },
+                {
+                    "text": "**Catégories** : essentiels (toujours actifs) + analytiques / marketing / réseaux sociaux (interrupteurs).",
+                    "sub": false
+                },
+                {
+                    "text": "**Apparence** : couleurs (fond, texte, accent « Accepter », bouton « Refuser »), arrondi des coins.",
+                    "sub": false
+                },
+                {
+                    "text": "**Réinitialisation des consentements** (bouton) → le bandeau réapparaît pour tous les visiteurs (versionnement).",
+                    "sub": false
+                },
+                {
+                    "text": "**Bandeau public** réécrit : applique position/couleurs/arrondi/catégories, durée de cookie selon la validité, refus aussi visible que l'acceptation (CNIL).",
+                    "sub": false
+                }
+            ]
+        },
+        {
+            "title": "🔍 SEO & médias (nouveau)",
+            "items": [
+                {
+                    "text": "Nouvelle page **Configuration → SEO & médias** (`/admin/configuration/seo`) avec **contrôleur + service dédiés** (`SeoController` / `SeoService`).",
+                    "sub": false
+                },
+                {
+                    "text": "**Uploads** : logo (SVG/PNG/JPG/WebP/GIF), favicon (SVG/PNG/ICO), image Open Graph (PNG/JPG/WebP) — avec aperçu et suppression, validation MIME + taille.",
+                    "sub": false
+                },
+                {
+                    "text": "**Référencement** : modèle de titre, meta description (160 car.), mots-clés, directive **robots** (index/noindex…), **Google Analytics / Tag Manager**.",
+                    "sub": false
+                },
+                {
+                    "text": "L'onglet « SEO » de la page Paramètres est retiré (remplacé par cette page dédiée).",
+                    "sub": false
+                }
+            ]
+        },
+        {
+            "title": "🔧 Corrections & ajustements",
+            "items": [
+                {
+                    "text": "**Réglages restaurés** : la table `settings` avait été recréée vide → debug, cache, mode maintenance, reCAPTCHA, SEO (nom du site) et e-mails semblaient « cassés » car ils lisaient des valeurs absentes. Les 33 réglages ont été restaurés ; ces fonctionnalités refonctionnent. L'installeur seed désormais l'ensemble complet des réglages par défaut.",
+                    "sub": false
+                },
+                {
+                    "text": "**Menu réorganisé** : suppression du groupe « Système ». **Modules, Centre de sécurité et Monitoring** sont déplacés dans le menu **Configuration**.",
+                    "sub": false
+                },
+                {
+                    "text": "**Module System protégé** : `isProtectedModule()` se base désormais sur le flag `core` du module.json → Auth, Configuration et System ne sont plus désactivables.",
+                    "sub": false
+                },
+                {
+                    "text": "**Transition clair/sombre** retravaillée : fondu uniforme et coordonné (classe `theme-anim` activée le temps du basculement) au lieu du fondu inégal entre éléments.",
+                    "sub": false
+                },
+                {
+                    "text": "**Onglet TurboNav** enrichi (présentation, bénéfices, état actuel) dans Configuration.",
+                    "sub": false
+                }
+            ]
+        }
+    ],
+    "types": [
+        "feature",
+        "security"
+    ]
+}

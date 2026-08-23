@@ -1,0 +1,48 @@
+{
+    "date": "2026-06-04",
+    "title": "Installeur : redirection auto + durcissement sécurité",
+    "groups": [
+        {
+            "title": "🚀 Redirection automatique vers l'installeur",
+            "items": [
+                {
+                    "text": "Le front controller (`index.php`) **redirige vers `/install/`** si le framework n'est pas installé, **avant** le chargement du bootstrap (qui échouerait sans `.env`/BDD). Ne s'applique pas en CLI.",
+                    "sub": false
+                },
+                {
+                    "text": "**Détection robuste + double sécurité** (fix faux positif de redirection sur une install existante sans `installed.lock`) : considéré installé si `install/installed.lock` **OU** `.env` présent **OU** la config `framework/config/database.php` pointe vers une base réellement accessible **contenant la table cœur `users`**. Si l'install est détectée valide mais sans marqueur, `installed.lock` est créé automatiquement (best-effort) pour éviter de refaire la vérification BDD à chaque requête.",
+                    "sub": false
+                }
+            ]
+        },
+        {
+            "title": "🔒 Audit de sécurité du module d'installation (`/install`)",
+            "items": [
+                {
+                    "text": "**Contrôleur global sécurisé** `install/InstallController.php` : centralise toutes les actions AJAX (test-db / save-admin / run). Verrou « déjà installé » + **vérification CSRF systématique** + validation des entrées en un seul point. `install/index.php` ne fait plus que déléguer.",
+                    "sub": false
+                },
+                {
+                    "text": "**CSRF** : jeton de session généré et exposé en JS ; transmis sur chaque appel (`csrf` POST/GET ou header `X-CSRF-Token`), vérifié en `hash_equals`. Jeton + secrets de session purgés à la finalisation.",
+                    "sub": false
+                },
+                {
+                    "text": "**Mot de passe admin plus jamais en clair en session** : haché en **Argon2id** dès l'étape « Administrateur » ; seul le hash transite jusqu'à la création du compte (`createAdmin` utilise le hash pré-calculé). Validation renforcée du nom d'utilisateur.",
+                    "sub": false
+                },
+                {
+                    "text": "**`.env` sécurisé** : valeurs échappées avant écriture (lues par `parse_ini_file`). **Suppression des CR/LF/NUL** → empêche l'injection de variables d'environnement via le mot de passe ; échappement backslash/guillemet (round-trip `parse_ini_file` vérifié). Écriture `LOCK_EX` + `chmod 0640`.",
+                    "sub": false
+                },
+                {
+                    "text": "**Import SQL robuste** : remplacement de l'`exec()` massif par un **découpage en instructions** (gère les `;` dans chaînes et commentaires `-- `/`#`/`/* */`, échappement antislash) exécutées une à une, avec **rapport d'erreur précis** (numéro d'instruction + extrait) pour `schema.sql` et `seed.sql`.",
+                    "sub": false
+                }
+            ]
+        }
+    ],
+    "types": [
+        "security",
+        "feature"
+    ]
+}

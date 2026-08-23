@@ -1,0 +1,229 @@
+{
+    "date": "2026-05-30",
+    "title": "Générateur de module, installeur ZIP, diagnostic & migrations",
+    "groups": [
+        {
+            "title": "🧹 Nettoyage de tables héritées inutilisées",
+            "items": [
+                {
+                    "text": "Suppression des tables héritées inutilisées **`module_settings`**, **`user_permissions`**, **`user_premium_access`** et **`user_activities`** des fichiers d'installation (`install/schema.sql` ; `user_permissions` aussi dans `modules/Auth/schema.sql`) — vestiges d'anciens développements, aucune donnée ni usage. La méthode morte **`Logger::logActivity()`** (seul écrivain de `user_activities`, jamais appelée) a également été retirée pour rester cohérent.",
+                    "sub": false
+                }
+            ]
+        },
+        {
+            "title": "🚧 Bandeau « mode maintenance actif »",
+            "items": [
+                {
+                    "text": "Quand le **mode maintenance** est activé, un **bandeau rouge** s'affiche en haut de l'administration, **sous** le bandeau du dossier `/install` (couleur différente pour les distinguer), avec un lien direct vers Configuration pour le désactiver. Lecture directe du réglage `maintenance_mode` dans le shell admin.",
+                    "sub": false
+                }
+            ]
+        },
+        {
+            "title": "🗺️ Sitemap & robots.txt + optimisation des images",
+            "items": [
+                {
+                    "text": "**Génération sitemap.xml / robots.txt** : nouvelle carte sur la page **SEO & médias** (`/admin/configuration/seo`). Service dédié `SitemapService` + contrôleur `SitemapController` (route `POST /admin/configuration/sitemap/generate`). Le sitemap inclut l'accueil et, si le module Forum est actif, le forum, ses catégories/sujets visibles (invités) et ses pages publiques. `robots.txt` référence le sitemap et bloque `/admin`, `/install`, `/framework`, `/auth` (ou tout le site si `seo_robots` = noindex). Si le fichier existe déjà, la carte affiche **la date de génération + nombre d'URL** avec un bouton **« Mettre à jour / régénérer »** et un lien « Voir le sitemap ».",
+                    "sub": false
+                },
+                {
+                    "text": "**Optimisation des images à l'upload** : nouveau service framework `ImageOptimizer` (GD) — redimensionne (largeur max) et recompresse les images bitmap (JPG/PNG/WebP), en n'écrasant l'original que si le résultat est plus léger ; **ignore SVG/ICO/GIF**. Branché sur les uploads SEO (logo/OG) et Configuration (logo/couverture). **Administrable** dans Configuration → Système : interrupteur « Optimiser les images uploadées » + largeur max (déf. 1920 px) + qualité (déf. 82). Test : JPEG 3000 px / 48 Ko → 1920 px / 19 Ko.",
+                    "sub": false
+                }
+            ]
+        },
+        {
+            "title": "🧭 TurboNav — état actif du menu resynchronisé",
+            "items": [
+                {
+                    "text": "Après une navigation AJAX, le menu (sidebar + topnav) conservait l'item actif de la **page précédente** (ex. « Configuration » surligné alors qu'on était sur le dashboard Forum), car TurboNav ne remplaçait que `#admin-content`. Ajout de `syncChrome()` : après chaque swap (clic **et** retour/avance navigateur), la sidebar `.adm-nav`, la barre `.adm-topnav` et le titre `.adm-header-title` sont réinjectés depuis la réponse serveur — qui calcule déjà le bon item actif via `AdminMenuService::isActive`.",
+                    "sub": false
+                }
+            ]
+        },
+        {
+            "title": "🍪 RGPD — texte du bandeau par défaut",
+            "items": [
+                {
+                    "text": "Le **texte introductif** (et le titre) du bandeau cookies retombent désormais sur un **texte par défaut** (`RgpdService::DEFAULT_TITLE` / `DEFAULT_TEXT`) lorsqu'ils sont vides — aussi bien à l'affichage qu'à l'enregistrement. Avant, un `rgpd_text` enregistré vide était conservé tel quel (la valeur par défaut n'était appliquée que si la clé n'existait pas), d'où un bandeau sans texte.",
+                    "sub": false
+                }
+            ]
+        },
+        {
+            "title": "🧭 Menus topbar — fermeture au clic",
+            "items": [
+                {
+                    "text": "**Mega-menu et menus déroulants topbar** : cliquer un lien laissait le panneau ouvert (avec TurboNav la page ne se recharge pas, et le `:hover` maintenait le panneau sous le curseur). Désormais, le clic sur un lien d'un `.adm-topnav-sub` retire l'état `open` et ajoute une classe `closing` qui neutralise le `:hover` jusqu'à ce que la souris quitte l'item → le menu se ferme immédiatement.",
+                    "sub": false
+                }
+            ]
+        },
+        {
+            "title": "🧱 Configuration — services dédiés (Mail + Images)",
+            "items": [
+                {
+                    "text": "Poursuite de la séparation (comme SEO/RGPD/Sitemap) : extraction de **`MailService`** (réglages e-mail + validation de l'expéditeur) et **`ImageSettingsService`** (réglages d'optimisation **+ point d'entrée unique `optimize()`**). `ConfigurationController` s'allège : `saveEmail()` et la partie images de `saveSystem()` délèguent à ces services. **`SeoService` et l'upload de Configuration** appellent désormais `ImageSettingsService::optimize()` au lieu de dupliquer la lecture des réglages + l'appel à `ImageOptimizer`.",
+                    "sub": false
+                }
+            ]
+        },
+        {
+            "title": "🪟 Compat Bootstrap — shim `bootstrap.Modal`",
+            "items": [
+                {
+                    "text": "Ajout d'un **shim minimal de l'API Bootstrap** (`window.bootstrap.Modal` / `Collapse` / `Tab`) dans `ui.js` : bascule la classe `.show` (CSS déjà fournie par `compat.css`), cohérent avec la délégation `data-bs-*`. Permet aux modules qui ouvrent des modales **par JS** (ex. le wizard de configuration de GameNodePanel) de fonctionner sans Bootstrap. Ajout de `modal-xl`, `modal-dialog-scrollable`, `btn-close-white` et en-têtes `.modal-header.bg-*` dans `compat.css`.",
+                    "sub": false
+                }
+            ]
+        },
+        {
+            "title": "🖥️ Module GameNodePanel (ex-GameServerHub)",
+            "items": [
+                {
+                    "text": "Le plus gros module (≈700 fichiers) intégré au framework, puis **rebrandé GameServerHub → GameNodePanel (GNP)** : namespace/dossier/classe, routes `/admin/gamenodepanel`, préfixe des 80 tables `gsh_`→`gnp_`, sous-système GSHQ→GNPQ. Catégorie « Game Node Panel ». Détails dans son `changelog.json`. *(Reste : intégration shell fine — Phase 1.)*",
+                    "sub": false
+                },
+                {
+                    "text": "**Modal changelog de la page Modules élargi** (620 → 880 px) pour les longs journaux.",
+                    "sub": false
+                }
+            ]
+        },
+        {
+            "title": "🧩 Runner SQL robuste (dumps, triggers, FK) + changelog tolérant",
+            "items": [
+                {
+                    "text": "**`ModuleManager` exécute désormais les scripts SQL statement par statement** avec gestion de la directive **`DELIMITER`** (triggers/procédures à corps `BEGIN…END`) et **`FOREIGN_KEY_CHECKS=0`** le temps du script (CREATE TABLE avec FK « en avant », typiques des dumps phpMyAdmin/mysqldump). Permet d'installer des modules au schéma complexe (ex. GameServerHub : 80 tables/vues + triggers).",
+                    "sub": false
+                },
+                {
+                    "text": "**Page Modules — modal changelog tolérant** : `info()` normalise les 3 formats de `changelog.json` rencontrés (liste, `{\"versions\":[…]}`, objet indexé par version) → le modal s'affiche correctement quel que soit le module.",
+                    "sub": false
+                }
+            ]
+        },
+        {
+            "title": "🗑️ Suppression de module + correctif bouton ZIP",
+            "items": [
+                {
+                    "text": "**Suppression définitive d'un module** depuis la page Modules (bouton 🗑️ sur les modules non-cœur) : modal de **confirmation par saisie du nom** (anti-erreur), puis `ModuleManager::deleteModule()` exécute `uninstall.sql` (**suppression des tables/données**), retire les lignes `modules` + `module_migrations` et **supprime le dossier** du module sur le disque. Les **modules cœur** (Auth/Configuration/System) sont refusés.",
+                    "sub": false
+                },
+                {
+                    "text": "**Correctif** : le bouton « ⬆️ Installer (.zip) » n'ouvrait pas le formulaire (le `style=\"display:none\"` inline l'emportait sur la classe `.open`) → géré entièrement en CSS désormais.",
+                    "sub": false
+                }
+            ]
+        },
+        {
+            "title": "🪄 Générateur de module (scaffolding)",
+            "items": [
+                {
+                    "text": "Nouvel assistant **`/admin/modules/generate`** (bouton « 🪄 Générer un module » sur la page Modules). À partir d'un formulaire (nom PascalCase, nom affiché, description, auteur, icône, catégorie, sections, mega-menu), `ModuleGeneratorService` génère un **module complet et activable** : `module.json` (menu + catégorie), classe `BaseModule`, `routes.php`, `Controllers/AdminController` (dashboard + une méthode par section), `Services/<Nom>Service`, `database/install.sql` + `uninstall.sql` + dossier `migrations/`, `changelog.json`, et les **vues UI maison** (.ui-*). Slugs de sections translittérés (accents). Module créé **inactif** (activation ensuite, avec vérification des tables).",
+                    "sub": false
+                }
+            ]
+        },
+        {
+            "title": "📦 Installeur de module depuis un ZIP",
+            "items": [
+                {
+                    "text": "Bouton **« ⬆️ Installer un module (.zip) »** sur la page Modules. Service dédié `ModuleInstallerService` : validation (taille 50 Mo max, extension .zip, extension PHP zip), **protection zip-slip**, détection du `module.json` (racine ou sous-dossier), validation du manifeste (`name`/`class`), extraction puis déplacement vers `modules/<Name>` avec **sauvegarde de l'ancienne version** en cas de mise à jour. L'archive est **installée mais pas activée automatiquement** : l'activation passe par la couche de vérification des tables.",
+                    "sub": false
+                }
+            ]
+        },
+        {
+            "title": "🩺 Page Diagnostic / santé (nouveau)",
+            "items": [
+                {
+                    "text": "Nouvelle page **`/admin/diagnostic`** (Configuration → Diagnostic) avec `DiagnosticService` + `DiagnosticController` dédiés. Contrôles : tables cœur (users/settings/modules), **module actif sans ses tables**, **version module.json ≠ base / migrations en attente**, dossier actif manquant, dossiers non inscriptibles (uploads/logs/racine), présence de `/install`. Synthèse OK / Avertissements / Erreurs.",
+                    "sub": false
+                },
+                {
+                    "text": "**Réparations en un clic** : réinstaller un module (recrée les tables), mettre à jour (migrations), désactiver un module orphelin, supprimer `/install`.",
+                    "sub": false
+                }
+            ]
+        },
+        {
+            "title": "🔄 Migrations versionnées par module",
+            "items": [
+                {
+                    "text": "Nouveau système de **migrations** : un module peut fournir `database/migrations/*.sql` (fichiers ordonnés par nom). Table de suivi **`module_migrations`** (module + migration appliqués).",
+                    "sub": false
+                },
+                {
+                    "text": "**`install.sql` = baseline** (état complet à jour) : à l'activation, les migrations présentes sont marquées « appliquées » sans être rejouées. Les migrations ne servent qu'aux **mises à jour** d'un module déjà installé.",
+                    "sub": false
+                },
+                {
+                    "text": "**`ModuleManager::updateModule()`** exécute les migrations en attente (dans l'ordre, chacune enregistrée ; arrêt au 1ᵉʳ échec sans marquer la migration fautive) et synchronise la version en base sur celle du `module.json`. `pendingMigrationCount()` pour l'UI.",
+                    "sub": false
+                },
+                {
+                    "text": "Permet les **mises à jour de modules payants** (v1.0 → v1.1) sans casser le schéma.",
+                    "sub": false
+                }
+            ]
+        },
+        {
+            "title": "🛡️ Installation de module — sécurisée et atomique",
+            "items": [
+                {
+                    "text": "**`ModuleManager::activateModule()` durci** : l'activation ne réussit que si **(1)** le schéma SQL s'exécute sans erreur, **(2)** toutes les tables déclarées (`CREATE TABLE`) existent réellement après coup (vérification via `information_schema`), et **(3)** le hook `install()` réussit. À la moindre erreur, le module **n'est pas activé**, les **tables partiellement créées sont nettoyées** (`uninstall.sql`), et `active` est remis à 0. Plus jamais de **menu actif sans tables**.",
+                    "sub": false
+                },
+                {
+                    "text": "**Message d'erreur exposé** : l'erreur réelle (ex. syntaxe SQL) est conservée (`getLastError()`) et **affichée dans la page Modules** lors d'une tentative d'activation échouée, au lieu d'un message générique.",
+                    "sub": false
+                },
+                {
+                    "text": "`deactivateModule()` aligné (capture `Throwable` + `getLastError()`).",
+                    "sub": false
+                }
+            ]
+        },
+        {
+            "title": "🗂️ Modules — regroupement par catégorie",
+            "items": [
+                {
+                    "text": "La page **Modules** (`/admin/modules`) regroupe désormais les modules par **catégorie**, avec un en-tête par section (les modules **cœur** sont côte à côte sous « 🛠️ Système »). Nouvelle clé **`\"category\"`** dans `module.json` (ex. Forum → « Communautaire », Marketplace → « e-commerce ») ; à défaut, un module cœur tombe dans « Système », les autres dans « Autres ». Tri : Système en premier, Autres en dernier. Les filtres Actifs/Inactifs masquent les sections devenues vides.",
+                    "sub": false
+                }
+            ]
+        },
+        {
+            "title": "🧩 Modules — modal de détails / changelog",
+            "items": [
+                {
+                    "text": "La page **Modules** (`/admin/modules`) affiche de nouveau, via un **bouton « ℹ️ Détails »** par carte, un **modal** récapitulant nom, version, auteur, dépendances, statut « cœur » et le **journal des modifications** lu depuis le `changelog.json` du module (endpoint `/admin/modules/info` déjà existant). Modal en UI maison (fermeture backdrop/Échap).",
+                    "sub": false
+                }
+            ]
+        },
+        {
+            "title": "🧭 Mega-menu en opt-in + switchs sécurité",
+            "items": [
+                {
+                    "text": "**Mega-menu désormais explicite** : il ne se déclenche plus automatiquement au-delà de 6 entrées (ce qui transformait à tort le menu **Configuration** en mega-menu bogué). Il faut maintenant déclarer **`\"mega\": true`** dans le `module.json` de l'item. Seul **Forum** l'active ; Configuration redevient un menu déroulant classique. (`AdminMenuService::normalize()` propage la clé `mega`.)",
+                    "sub": false
+                },
+                {
+                    "text": "**Centre de sécurité — interrupteurs** : les activations (globale, blocage auto, par catégorie, et la colonne « Actif » de chaque détecteur) sont rendues par de **vrais switchs coulissants** (CSS maison, accent du thème) au lieu de cases à cocher.",
+                    "sub": false
+                },
+                {
+                    "text": "**Mega-menu Forum — pleine largeur** : le panneau était ancré sous le libellé « Forum » et débordait à droite. Il est désormais un **panneau pleine largeur ancré au bas réel du header** : l'item porteur passe en `position: static` et le panneau en `position: absolute; top: 100%; left:0; right:0` (s'ancre sur le header `sticky`), grille 4 colonnes → 3 sous 900px → 2 sous 640px, en mode topbar. `top: 100%` suit la hauteur réelle du header (bannière `/install`, nav sur 2 lignes) → plus de chevauchement ni de débordement.",
+                    "sub": false
+                }
+            ]
+        }
+    ],
+    "types": [
+        "feature",
+        "module"
+    ]
+}

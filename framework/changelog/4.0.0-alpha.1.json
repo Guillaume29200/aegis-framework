@@ -1,0 +1,250 @@
+{
+    "date": "2026-05-29",
+    "title": "Socle initial : installeur & refonte de l’interface",
+    "groups": [
+        {
+            "title": "🚀 Installeur `/install/` (nouveau)",
+            "items": [
+                {
+                    "text": "**Assistant d'installation multi-étapes** (sidebar + design maison, sans dépendance) : 1) présentation, 2) vérification des prérequis & droits d'écriture, 3) connexion base de données, 4) compte administrateur, 5) **installation en AJAX** (barre de progression, étapes animées).",
+                    "sub": false
+                },
+                {
+                    "text": "**Vérification d'hébergement** : PHP 8.5+ requis, extensions (mbstring, pdo_mysql, curl, gd, fileinfo, openssl, zip, json, intl), directives (file_uploads, log_errors), mod_rewrite, droits d'écriture — avec **aide contextuelle** si un élément manque.",
+                    "sub": false
+                },
+                {
+                    "text": "**Installation automatique** : création de la base, import du schéma (20 tables), compte super-admin (Argon2id), activation des modules cœur (Auth/Configuration/System), réglages par défaut, écriture du `.env`, verrou `install/installed.lock` anti-réinstallation.",
+                    "sub": false
+                },
+                {
+                    "text": "`install/schema.sql` : schéma complet de la base généré.",
+                    "sub": false
+                },
+                {
+                    "text": "**UX affinée** : étape « Prérequis » avec **loader animé** (roue de chargement, résultats révélés un par un ✅/❌) et grille compacte (moins de défilement) ; **champs de saisie redessinés** (icônes, focus, espacement) sur les étapes Base de données et Administrateur.",
+                    "sub": false
+                },
+                {
+                    "text": "**Bannière de sécurité admin** : un bandeau discret apparaît en haut de l'administration tant que le dossier `/install` existe (rappel de le supprimer). Masquable pour la session.",
+                    "sub": false
+                }
+            ]
+        },
+        {
+            "title": "🍪 RGPD / Cookies (nouveau, administrable)",
+            "items": [
+                {
+                    "text": "**Refactor (architecture)** : RGPD déplacé dans son **propre `RgpdController` + `RgpdService`** (séparés de Configuration/SettingsService) — règle « un contrôleur + un service par fonctionnalité ».",
+                    "sub": false
+                },
+                {
+                    "text": "**Interface simplifiée** : catégories standard fixes (Nécessaires/Préférences/Statistiques/Marketing) avec interrupteurs on/off et libellés éditables — fini l'éditeur technique (codes/JSON).",
+                    "sub": false
+                },
+                {
+                    "text": "**Table `settings` manquante créée** : la base ne contenait pas la table `settings` attendue par `SettingsService` → toute la configuration du CMS échouait silencieusement (retour aux valeurs par défaut). Table recréée (`param_key` / `param_value` / `param_type`). **La configuration se sauvegarde de nouveau.**",
+                    "sub": false
+                },
+                {
+                    "text": "**Système RGPD complet et administrable** : nouvel écran *Configuration → 🍪 RGPD / Cookies* (`/admin/configuration/rgpd`) — activation de la bannière, titre/texte, lien politique, et **éditeur de catégories de cookies** dynamiques (ajout/suppression, requise/active, description).",
+                    "sub": false
+                },
+                {
+                    "text": "**Bannière publique réécrite** : dynamique (catégories configurées), consentement par catégorie, boutons Tout accepter / Refuser / Personnaliser, **versionnée** (toute modification redemande le consentement), stockage cookie + localStorage, sans dépendance.",
+                    "sub": false
+                }
+            ]
+        },
+        {
+            "title": "🔒 Sécurité (audit complet)",
+            "items": [
+                {
+                    "text": "**Injection SQL corrigée** dans `AIModelService` (`getByCapability`, `update`) — requêtes désormais préparées.",
+                    "sub": false
+                },
+                {
+                    "text": "**Injection SQL corrigée** dans `MonitoringService` (`information_schema`) — passage de `PDO::quote()` à des requêtes préparées.",
+                    "sub": false
+                },
+                {
+                    "text": "**Injection SQL (LIMIT)** sécurisée dans `MemberController::getUserSessions` (cast entier explicite).",
+                    "sub": false
+                },
+                {
+                    "text": "**Injection de commande** corrigée dans `AdminController` (arrêt serveur SSH) — `escapeshellarg()` + validation stricte des PIDs et ports.",
+                    "sub": false
+                },
+                {
+                    "text": "**CSRF centralisé** : `Router::enableCsrfGuard()` valide automatiquement le token sur toute requête `POST/PUT/PATCH/DELETE` (déni par défaut, liste d'exceptions configurable). Plus de dépendance à une validation manuelle par contrôleur.",
+                    "sub": false
+                },
+                {
+                    "text": "**Rate limiting du login (compte + IP)** : `RateLimiter` branché sur `AuthService::login()` — clé par compte (anti-attaque ciblée) et par IP (anti-énumération). 5 tentatives / 5 min → blocage 15 min. IP via `REMOTE_ADDR` uniquement (anti-spoof).",
+                    "sub": false
+                },
+                {
+                    "text": "**CSP durcie** : suppression de `unsafe-eval`.",
+                    "sub": false
+                },
+                {
+                    "text": "**Uploads** : `framework/uploads/.htaccess` renforcé (moteur PHP désactivé, handlers retirés, exécutables bloqués) — protection contre l'exécution de scripts.",
+                    "sub": false
+                },
+                {
+                    "text": "**Logs** : rotation par taille (10 Mo) + rétention (30 j) dans `Logger` ; `framework/logs/.htaccess` interdit tout accès web.",
+                    "sub": false
+                },
+                {
+                    "text": "**Pollution de variables** : `extract()` remplacé par `EXTR_SKIP` dans les rendus de vues.",
+                    "sub": false
+                },
+                {
+                    "text": "**API** : endpoint `/api/system/status` ne divulgue plus l'environnement.",
+                    "sub": false
+                }
+            ]
+        },
+        {
+            "title": "🤖 Modèles IA — simplification",
+            "items": [
+                {
+                    "text": "**Champs inutiles supprimés** : `context_window`, `pricing_input`, `pricing_output` (colonnes SQL + UI + service + contrôleur + schéma + seed). La fiche/édition ne montre plus le bloc « Paramètres techniques ». Conservé : capacités (vision/code/audio…), provider, nom, notes, actif/défaut.",
+                    "sub": false
+                },
+                {
+                    "text": "Formulaires **création/édition** réécrits en UI maison.",
+                    "sub": false
+                }
+            ]
+        },
+        {
+            "title": "🖌️ Portage des pages admin vers l'UI maison — TERMINÉ",
+            "items": [
+                {
+                    "text": "**Toutes les vues d'administration sont désormais sans Bootstrap** (vérifié : zéro marqueur `data-bs-`/`col-*`/`page-wrapper`…). Pages portées en `.ui-*` : Tableau de bord, Utilisateurs (liste, fiche, création, édition), Configuration/Paramètres (onglets + sauvegarde AJAX par section), Modèles IA (liste, création, édition), Modules, Sécurité, Monitoring, RGPD.",
+                    "sub": false
+                },
+                {
+                    "text": "La bannière cookies n'est plus pilotée par la section Sécurité (doublon retiré) — seule la page RGPD la gère.",
+                    "sub": false
+                },
+                {
+                    "text": "**Correctif** : badge de rôle « Super Admin » invisible dans la liste des utilisateurs (classe `.bg-dark` manquante dans la couche de compatibilité → texte blanc sur fond clair). Ajout de `.bg-dark`, `.bg-light`, `.text-dark`.",
+                    "sub": false
+                },
+                {
+                    "text": "**Pages réécrites en markup natif `.ui-*`** (fin de la dépendance au markup Bootstrap, fini le « trop large/trop gros ») : **Utilisateurs (liste + fiche détaillée)**, **Modules**, **Centre de sécurité**, **Modèles IA (liste)**. KPI, tableaux, cartes et badges cohérents, dark/light géré. La fiche utilisateur abandonne le plugin de carte (jVectorMap) au profit d'un lien OpenStreetMap.",
+                    "sub": false
+                },
+                {
+                    "text": "**Plein écran corrigé** : l'appel `requestFullscreen` détaché provoquait une « Illegal invocation » → le bouton plein écran ne faisait rien. Corrigé (appel lié à l'élément + préfixes navigateurs).",
+                    "sub": false
+                }
+            ]
+        },
+        {
+            "title": "🌱 Données par défaut (seed)",
+            "items": [
+                {
+                    "text": "**Modèles IA restaurés** : la table `ai_models` était vide. Ajout de `install/seed.sql` (13 modèles OpenAI/Claude/Mistral) exécuté par l'installeur (nouvelle étape « Données par défaut »), et restauration dans la base courante.",
+                    "sub": false
+                }
+            ]
+        },
+        {
+            "title": "🎨 Interface d'administration (refonte complète, zéro dépendance externe)",
+            "items": [
+                {
+                    "text": "**Suppression de Bootstrap/jQuery** du back-office au profit d'une **UI maison** (`assets/css/admin/ui.css`, `assets/js/admin/ui.js`).",
+                    "sub": false
+                },
+                {
+                    "text": "**Shell commutable** : disposition **sidebar** ou **header horizontal** (mega-menu), thème **clair/sombre/auto**, **plein écran**, **couleur d'accent** personnalisable. Préférences en `localStorage` (anti-FOUC).",
+                    "sub": false
+                },
+                {
+                    "text": "**Panneau d'apparence** accessible depuis le menu utilisateur (plus de bouton flottant).",
+                    "sub": false
+                },
+                {
+                    "text": "**Emoji** comme iconographie principale du chrome.",
+                    "sub": false
+                },
+                {
+                    "text": "**Couche de compatibilité** (`assets/css/admin/compat.css`) : les pages non encore réécrites restent fonctionnelles et au nouveau look.",
+                    "sub": false
+                },
+                {
+                    "text": "**Dashboard** refait (KPI, graphe d'inscriptions sans librairie, répartition par rôle).",
+                    "sub": false
+                },
+                {
+                    "text": "**Page Monitoring** refaite : emoji, thème dark/light, onglets en JS vanilla.",
+                    "sub": false
+                }
+            ]
+        },
+        {
+            "title": "🧩 Architecture modulaire",
+            "items": [
+                {
+                    "text": "**Menu admin 100 % JSON** : chaque `module.json` déclare sa clé `menu` (label, icône, url, position, sous-menus). `AdminMenuService` agrège les modules actifs. Plus aucun menu codé en dur.",
+                    "sub": false
+                },
+                {
+                    "text": "**Module `System`** créé (cœur, non désactivable) : regroupe Modules, Centre de sécurité et Monitoring (contrôleurs + service + vues + routes), auparavant éparpillés dans `framework/`.",
+                    "sub": false
+                },
+                {
+                    "text": "**Modules cœur** (`\"core\": true`) non désactivables : Auth, Configuration, System.",
+                    "sub": false
+                },
+                {
+                    "text": "**Réorganisation des fichiers** :",
+                    "sub": false
+                },
+                {
+                    "text": "Shell admin → `framework/Views/theme/admin/` (helpers `admin_header()` / `admin_footer()`).",
+                    "sub": true
+                },
+                {
+                    "text": "Pages publiques (maintenance, bannière cookies) → `framework/Views/theme/public/`.",
+                    "sub": true
+                },
+                {
+                    "text": "`framework/Views/admin/` et `framework/Controllers/` supprimés.",
+                    "sub": true
+                }
+            ]
+        },
+        {
+            "title": "🐛 Corrections",
+            "items": [
+                {
+                    "text": "**`/admin/users`** : erreur « Undefined variable `$basePath` » corrigée (passage à `BASE_URL`).",
+                    "sub": false
+                },
+                {
+                    "text": "**`/admin/configuration/ai-models`** : 404 corrigé (URL de menu alignée sur la route réelle).",
+                    "sub": false
+                },
+                {
+                    "text": "**Mode horizontal** : suppression de l'ascenseur horizontal parasite ; le mega-menu n'est plus rogné (cause : `overflow` du conteneur de nav).",
+                    "sub": false
+                },
+                {
+                    "text": "**TurboNav** rétabli dans le nouveau shell (et dé-référencé de GSH : global `TURBONAV`, conteneur `#admin-content`).",
+                    "sub": false
+                },
+                {
+                    "text": "**Logs parasites** : `GeolocService` ne journalise plus à chaque appel (logging derrière un flag `DEBUG` désactivé). Les `error_log()` PHP vont dans `C:/wamp64/logs/php_error.log`.",
+                    "sub": false
+                }
+            ]
+        }
+    ],
+    "types": [
+        "release"
+    ]
+}

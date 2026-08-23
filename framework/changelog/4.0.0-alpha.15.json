@@ -1,0 +1,68 @@
+{
+    "date": "2026-07-29",
+    "title": "Le préfixe public d'un module se change depuis /admin/modules : /gamenodeesport devient /site, /web ou ce que veut la communauté",
+    "groups": [
+        {
+            "title": "🔗 Préfixe public renommable",
+            "items": [
+                {
+                    "text": "[Demandé par l'utilisateur] Un module exposant un espace visiteur déclare son préfixe canonique dans son `module.json` (`\"public\": {\"prefix\": \"…\", \"label\": \"…\"}`). Une carte de `/admin/modules` affiche alors l'adresse publique du module et un bouton ✏️ ouvrant un modal pour la changer — sans toucher au code du module."
+                },
+                {
+                    "text": "La substitution a lieu à deux endroits seulement : `Router::addRoute()` pour les URL entrantes, `url()` pour les URL sortantes (`u()`, `e()` et `redirect()` en dépendent tous). Les 537 chemins écrits en dur dans GameNodeEsport n'ont pas eu à bouger : le module continue d'écrire `/gamenodeesport/equipes`, le routeur l'enregistre sous le préfixe choisi."
+                },
+                {
+                    "text": "Le préfixe **d'administration ne change jamais** : `/admin/{module}` reste `/admin/{module}` en toutes circonstances."
+                },
+                {
+                    "text": "Les anciennes adresses restent valides : toute requête GET sur le préfixe canonique est redirigée en **301** vers l'adresse en vigueur, chaîne de requête comprise. Liens partagés, favoris et référencement survivent au renommage."
+                },
+                {
+                    "text": "Validation à l'enregistrement : 2 à 40 caractères en minuscules/chiffres/tirets, refus des segments réservés au cœur (`admin`, `api`, `assets`, `auth`, `install`, `uploads`…), des noms ressemblant à un fichier, et de toute collision avec le préfixe d'un autre module — même désactivé, puisqu'il peut être réactivé."
+                },
+                {
+                    "text": "Nouveau service `Framework\\Services\\PublicPrefix` (`translate()`, `effective()`, `canonical()`, `renamed()`, `validate()`) et nouvelle colonne `modules.public_prefix` ; une valeur vide signifie « suivre le manifeste »."
+                }
+            ]
+        },
+        {
+            "title": "🏠 Page d'accueil par défaut",
+            "items": [
+                {
+                    "text": "[Bug remonté par l'utilisateur] La liste « Page d'accueil par défaut » de `/admin/configuration` ne reposait que sur la clé historique `public_home`, que GameNodeEsport ne déclarait pas : le module était donc absent des choix alors qu'il est le site public. `LandingService` reconnaît désormais les deux déclarations — le bloc `public` (actuel) et `public_home` (historique, conservé pour Forum, Marketplace et FPSmeter)."
+                },
+                {
+                    "text": "Le réglage enregistre le chemin **canonique** et affiche l'adresse effective : renommer le préfixe public d'un module ne casse plus la redirection de la racine, elle suit automatiquement. Les valeurs déjà enregistrées sous l'ancienne forme restent acceptées au lieu d'être silencieusement remises à zéro."
+                }
+            ]
+        },
+        {
+            "title": "🐛 Corrections liées",
+            "items": [
+                {
+                    "text": "GameNodeEsport — les URL de retour et d'annulation PayPal (commande et don) ainsi que l'URL de webhook affichée dans les réglages de la boutique étaient concaténées après `u('/')`, ce qui contournait la traduction du préfixe. Elles passent désormais le chemin complet à `u()`."
+                },
+                {
+                    "text": "GameNodeEsport — l'URL du bouton d'un slider, saisie à la main dans l'administration, est repassée par `u()` quand elle pointe vers le site : le chemin d'installation est retiré, le préfixe traduit, et les adresses externes laissées intactes."
+                },
+                {
+                    "text": "GameNodeEsport — suppression des gardes mortes `function_exists('u') ? u(…) : chemin brut` (MenuService, WidgetRenderService, contrôleurs publics photos/équipes/recrutement) : `u()` est définie inconditionnellement par le bootstrap, et la branche de repli aurait produit une adresse non traduite."
+                }
+            ]
+        },
+        {
+            "title": "🎬 Lecteurs vidéo intégrés",
+            "items": [
+                {
+                    "text": "[Bug remonté par l'utilisateur] La directive `frame-src` de la politique de sécurité de contenu n'autorisait que Google et PayPal : tout lecteur vidéo ouvert depuis le site affichait « Ce contenu est bloqué ». Les cinq hôtes réellement employés par VideoProviderService sont désormais listés — youtube-nocookie.com, youtube.com, player.vimeo.com, geo.dailymotion.com et tiktok.com."
+                },
+                {
+                    "text": "Seuls ces hôtes sont ajoutés, pas de joker : ouvrir `frame-src` plus largement reviendrait à laisser n'importe quel site s'incruster dans une page. Twitch n'y figure pas, la page Streamers se contentant de lister les chaînes sans intégrer de lecteur."
+                },
+                {
+                    "text": "Twitch ajouté à `frame-src` : player.twitch.tv pour le lecteur, www.twitch.tv pour le tchat — les deux hôtes sont nécessaires, le tchat n'étant pas servi par le même domaine que le lecteur."
+                }
+            ]
+        }
+    ]
+}

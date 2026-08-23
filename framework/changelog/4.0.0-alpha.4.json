@@ -1,0 +1,35 @@
+{
+    "date": "2026-05-30",
+    "title": "Installation / désinstallation de modules + Tickets",
+    "groups": [
+        {
+            "title": "🧩 Installation / désinstallation de modules",
+            "items": [
+                {
+                    "text": "**ModuleManager exécute les SQL** : à l'activation d'un module → `modules/<Nom>/database/install.sql` (création des tables) ; à la désactivation → `database/uninstall.sql` (suppression). Convention générique pour tous les modules, pilotable depuis la page **Modules**.",
+                    "sub": false
+                },
+                {
+                    "text": "**Module Tickets intégré** : support de tickets (admin + espace membre), installable/désinstallable via l'interface.",
+                    "sub": false
+                },
+                {
+                    "text": "**Dé-couplé de GameServerHub** : retrait de la clé étrangère vers `gsh_game_servers`, des JOIN `gsh_*` du service et de la sélection de serveur (création de ticket possible sans serveur). `problem_type` conservé.",
+                    "sub": true
+                },
+                {
+                    "text": "**Vues admin réécrites** en UI maison `.ui-*` (liste avec KPI/filtres + détail avec fil de discussion, réponse, statut, suppression). Menu : entrée simple « 🎫 Tickets » (pas de mega-menu nécessaire).",
+                    "sub": true
+                },
+                {
+                    "text": "Vues membre conservées (thème espace membre existant), création adaptée sans serveur.",
+                    "sub": true
+                }
+            ]
+        }
+    ],
+    "types": [
+        "feature",
+        "module"
+    ]
+}

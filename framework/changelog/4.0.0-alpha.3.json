@@ -1,0 +1,52 @@
+{
+    "date": "2026-05-30",
+    "title": "Monitoring, mode debug & réorganisation des assets",
+    "groups": [
+        {
+            "title": "📡 Monitoring — corrections",
+            "items": [
+                {
+                    "text": "**Section « Permissions » corrigée** : `getAppRoot()` pointait vers `modules/System` (au lieu de la racine) depuis le déplacement du service → aucun fichier critique détecté. Corrigé via `ROOT_PATH`. La section liste désormais index.php, .htaccess, bootstrap, config DB/sécurité, .env — avec permissions octales **et** état lecture seule / inscriptible.",
+                    "sub": false
+                },
+                {
+                    "text": "**Onglet Stockage corrigé** : la taille du projet et la répartition étaient calculées sur le mauvais dossier (même cause) → désormais correctes (racine réelle).",
+                    "sub": false
+                }
+            ]
+        },
+        {
+            "title": "🐞 Mode debug fonctionnel",
+            "items": [
+                {
+                    "text": "Le réglage **« Mode debug »** est désormais l'**interrupteur maître** : quand il est actif, il force l'affichage des erreurs et l'injection de la debug bar, **quel que soit l'environnement**. Avant, l'injection était gardée par `APP_ENV` (debug_bar) et ignorait le réglage admin (rien ne se passait en production).",
+                    "sub": false
+                }
+            ]
+        },
+        {
+            "title": "🗂️ Réorganisation des assets + nettoyage final",
+            "items": [
+                {
+                    "text": "**Plus de dossier `/assets/` à la racine** : tout déplacé dans **`framework/assets/`** (css/admin, js/admin, images, flags). Toutes les références (`u('/assets/…')`, installeur, firewall, contrôleurs) mises à jour vers `/framework/assets/`.",
+                    "sub": false
+                },
+                {
+                    "text": "**TurboNav déplacé** dans `framework/assets/js/turbo-nav.js`.",
+                    "sub": false
+                },
+                {
+                    "text": "**Boxicons entièrement retiré** : `icons.css` + polices d'icônes (boxicons, LineIcons) supprimées, lien retiré du shell admin. Aucune référence restante.",
+                    "sub": false
+                },
+                {
+                    "text": "**Général (Configuration)** : upload du logo et de l'image de couverture en **glisser-déposer** avec aperçu de l'image en place.",
+                    "sub": false
+                }
+            ]
+        }
+    ],
+    "types": [
+        "fix"
+    ]
+}

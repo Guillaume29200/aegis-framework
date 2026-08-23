@@ -1,0 +1,70 @@
+{
+    "date": "2026-06-14",
+    "title": "Sessions robustes & configurables + InnoDB forcé",
+    "groups": [
+        {
+            "title": "🔐 Sessions — fin des déconnexions aléatoires + pilotage par configuration",
+            "items": [
+                {
+                    "text": "**Cause corrigée** : l'empreinte de session (`SessionManager::generateFingerprint()`) incluait l'IP cliente, et en local `localhost` alterne entre **IPv4 `127.0.0.1`** et **IPv6 `::1`** → l'empreinte « changeait » → déconnexion « hijacking » aléatoire. Les deux adresses de bouclage sont désormais **normalisées comme équivalentes**.",
+                    "sub": false
+                },
+                {
+                    "text": "**Liaison IP configurable** (`ip_binding`) : `off` (aucune vérif d'IP), `subnet` (tolère un changement dans le même sous-réseau /24 — défaut), `strict` (IP exacte, comportement historique).",
+                    "sub": false
+                },
+                {
+                    "text": "**Réglages pilotés depuis la base** : `bootstrap.php` lit les clés `settings` (`session_idle_minutes`, `session_regenerate_minutes`, `session_ip_binding`…) et **surcharge** `securityConfig['session']` (`gc_maxlifetime`, `regenerate_interval`, `ip_binding`) avant la construction du `SessionManager`. Repli transparent sur les défauts de `framework/config/security.php` si la base n'a rien.",
+                    "sub": false
+                },
+                {
+                    "text": "**Délai d'inactivité** désormais exprimé en minutes côté admin, et exposé au front (compte à rebours).",
+                    "sub": false
+                },
+                {
+                    "text": "**Front (thème admin)** : modale d'**avertissement avant déconnexion** par inactivité + **keep-alive** (ping `/auth/session/ping`) sur action « Rester connecté ».",
+                    "sub": false
+                },
+                {
+                    "text": "**Seeds** : valeurs par défaut des réglages de session ajoutées à `install/seed.sql` (idempotent, `INSERT IGNORE`).",
+                    "sub": false
+                }
+            ]
+        },
+        {
+            "title": "🗄️ InnoDB forcé sur la connexion (`Database`)",
+            "items": [
+                {
+                    "text": "`Database::connect()` exécute désormais `SET SESSION default_storage_engine = 'InnoDB'`. Sur les serveurs où `@@default_storage_engine = MyISAM` (cas fréquent sous WAMP), toute table créée par l'application — ou importée sans moteur explicite — restait en MyISAM, **brisant les clés étrangères InnoDB** (échec silencieux des `INSERT` enfants). Toutes les tables créées par Aegis sont maintenant garanties InnoDB.",
+                    "sub": false
+                }
+            ]
+        },
+        {
+            "title": "🧩 Helper `module_active()` + garde de licence non bloquante",
+            "items": [
+                {
+                    "text": "Nouveau helper global **`module_active(string $name): bool`** (`bootstrap.php`) : indique si un module est **chargé** (installé **et** actif). Sert à masquer proprement les liens vers des modules désactivés (ex. menu membre).",
+                    "sub": false
+                },
+                {
+                    "text": "Nouveau service framework **`Framework\\Services\\LicenseGuard`** : pont entre un module et un éventuel système de licence, **conçu pour ne jamais bloquer** (cache, tolérance hors-ligne, période d'essai, fail-open ; mode « ouvert » = aucun appel réseau). Si aucun système de licence n'est installé, tout passe en accès libre.",
+                    "sub": false
+                }
+            ]
+        },
+        {
+            "title": "🛡️ Exemption CSRF — API de validation de licence",
+            "items": [
+                {
+                    "text": "`framework/config/security.php` : ajout de `/api/license/validate` à la liste `csrf.except` (endpoint public appelé par des sites tiers, authentifié par clé + signature HMAC — pas par jeton CSRF de session).",
+                    "sub": false
+                }
+            ]
+        }
+    ],
+    "types": [
+        "fix",
+        "feature"
+    ]
+}

@@ -1,0 +1,38 @@
+{
+    "date": "2026-05-30",
+    "title": "Module Forum + méga-menu",
+    "groups": [
+        {
+            "title": "🗨️ Module Forum installé + mega-menu",
+            "items": [
+                {
+                    "text": "**Module Forum activé** via le système d'installation : **26 tables `forum_*`** créées (catégories, sujets, messages, signalements, thèmes, widgets sidebar, sondages, liens de navigation, permissions modérateurs, shoutbox, réputation/récompenses, etc.). **110 routes** enregistrées (front `/forum/*`, API `/forum/api/*`, admin `/admin/forum/*`). Aucun couplage GSH — clés étrangères uniquement vers `users` et `forum_*`.",
+                    "sub": false
+                },
+                {
+                    "text": "**`ModuleManager::runModuleSchema()`** : nouvelle convention d'installation supportant **deux formats** — soit `database/install.sql` (fichier unique), soit `schema.sql` + `schema_*.sql` (racine du module, triés alphabétiquement). Chaque fichier est exécuté dans son **propre try/catch** : une migration facultative déjà appliquée n'interrompt pas l'installation (avertissement loggé). `activateModule()` appelle ce schéma avant `install()`.",
+                    "sub": false
+                },
+                {
+                    "text": "**Mega-menu** : un menu d'administration avec **plus de 6 entrées** déclenche automatiquement l'affichage en mega-menu (mode topbar) — Forum expose **14 sections** (📊 Tableau de bord, 📁 Catégories, 💬 Sujets, 📝 Messages, 🚩 Signalements, 👥 Utilisateurs, 📄 Pages statiques, 🎨 Thèmes, 🧩 Widgets sidebar, 🗳️ Sondages, 🔗 Liens de navigation, 🛡️ Permissions modérateurs, 💭 Shoutbox, ⚙️ Réglages).",
+                    "sub": false
+                },
+                {
+                    "text": "**Topbar** : `<ul class=\"adm-topnav-sub mega\">` → grille **3 colonnes** (`repeat(3, minmax(180px,1fr))`, min 580px, max 92vw), repositionnement vers la gauche pour les derniers items, repli 2 colonnes < 700px.",
+                    "sub": true
+                },
+                {
+                    "text": "**Sidebar** : hauteur du sous-menu déplié portée de 500px à **900px** pour accueillir les 14 entrées sans coupure.",
+                    "sub": true
+                },
+                {
+                    "text": "**Désactivation non destructive** : le module Forum n'a pas de `database/uninstall.sql` → désactiver le module **conserve les données** (tables `forum_*` non supprimées). À documenter pour l'utilisateur.",
+                    "sub": false
+                }
+            ]
+        }
+    ],
+    "types": [
+        "module"
+    ]
+}
