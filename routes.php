@@ -5,24 +5,33 @@
  */
 
 // PAGE D'ACCUEIL
-$router->get('/', function() {
+$router->get('/', function() use ($container) {
     if (session_status() === PHP_SESSION_NONE) {
         session_start();
     }
 
-    $isLoggedIn = isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true;
+    // Page d'accueil par défaut configurable (admin → Configuration).
+    // Si un module public est choisi, TOUT visiteur arrivant sur « / » y est redirigé.
+    $landing = '';
+    try {
+        $db = $container->get('Framework\\Services\\Database');
+        $landing = (string) (new \Configuration\Services\SettingsService($db))->get('default_landing', '');
+    } catch (\Throwable $e) {
+        $landing = '';
+    }
+    if ($landing !== '' && $landing !== 'auth') {
+        redirect($landing);
+        return;
+    }
 
-    if ($isLoggedIn) {
-        // Redirection selon le rÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â´le
-        $role = $_SESSION['role'] ?? 'member';
-        $redirectPath = match($role) {
-            'admin', 'superadmin' => '/admin/dashboard',
-            'moderator' => '/admin/dashboard',
-            default => '/member/dashboard'
-        };
-        redirect($redirectPath);
+    // Repli : aucun module public choisi. Les administrateurs rejoignent
+    // l'administration ; les membres n'ont plus d'espace dédié (chaque module
+    // public gère le sien), on les renvoie donc sur la page de connexion.
+    $isLoggedIn = isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true;
+    $role = $_SESSION['role'] ?? '';
+    if ($isLoggedIn && in_array($role, ['admin', 'superadmin', 'moderator'], true)) {
+        redirect('/admin/dashboard');
     } else {
-        // Redirection automatique vers la page de login
         redirect('/auth/login');
     }
 });
@@ -131,43 +140,37 @@ $router->group('/admin', function($router) use ($container) {
     });
     
     // [Monitoring → déplacé dans le module System (modules/System/routes.php)]
-});
 
-// MEMBRES
-$router->group('/member', function($router) use ($container) {
-    $router->get('/dashboard', function() use ($container) {
+    // Assistant IA (icône 🧠 du header) — pré-intégré au core, indépendant de tout module.
+    $router->get('/chat', function() use ($container) {
         $db = $container->get('Framework\\Services\\Database');
-        $controller = new Auth\Controllers\MemberController($db);
-        $controller->dashboard();
+        $csrf = $container->get('Framework\\Security\\CSRFProtection');
+        $controller = new Framework\Controllers\ChatController($db, $csrf);
+        $controller->index();
     });
-    
-
-    $router->get('/sessions', function() use ($container) {
+    $router->get('/chat/{id}', function($id) use ($container) {
         $db = $container->get('Framework\\Services\\Database');
-        $controller = new Auth\Controllers\MemberController($db);
-        $controller->sessions();
+        $csrf = $container->get('Framework\\Security\\CSRFProtection');
+        $controller = new Framework\Controllers\ChatController($db, $csrf);
+        $controller->show((int)$id);
     });
-    $router->get('/game-servers', function() use ($container) {
+    $router->post('/chat/send', function() use ($container) {
         $db = $container->get('Framework\\Services\\Database');
-        $controller = new Auth\Controllers\MemberController($db);
-        $controller->gameServers();
+        $csrf = $container->get('Framework\\Security\\CSRFProtection');
+        $controller = new Framework\Controllers\ChatController($db, $csrf);
+        $controller->send();
     });
-    
-    $router->get('/profile', function() use ($container) {
+    $router->post('/chat/{id}/rename', function($id) use ($container) {
         $db = $container->get('Framework\\Services\\Database');
-        $controller = new Auth\Controllers\MemberController($db);
-        $controller->profile();
+        $csrf = $container->get('Framework\\Security\\CSRFProtection');
+        $controller = new Framework\Controllers\ChatController($db, $csrf);
+        $controller->rename((int)$id);
     });
-    
-    $router->post('/profile/update', function() use ($container) {
+    $router->post('/chat/{id}/delete', function($id) use ($container) {
         $db = $container->get('Framework\\Services\\Database');
-        $controller = new Auth\Controllers\MemberController($db);
-        $controller->updateProfile();
-    });
-    $router->post('/password/update', function() use ($container) {
-        $db = $container->get('Framework\\Services\\Database');
-        $controller = new Auth\Controllers\MemberController($db);
-        $controller->changePassword();
+        $csrf = $container->get('Framework\\Security\\CSRFProtection');
+        $controller = new Framework\Controllers\ChatController($db, $csrf);
+        $controller->delete((int)$id);
     });
 });
 

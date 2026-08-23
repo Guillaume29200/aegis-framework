@@ -213,17 +213,59 @@ try {
     }
     
     // ============================================
+    // INJECTION DU TRACEUR ANALYTICS (pages publiques HTML uniquement)
+    // ============================================
+    if (class_exists('Analytics\\Services\\AnalyticsService') && strpos($output, '</body>') !== false) {
+        $isAdminArea = (bool)preg_match('#^/admin(?:/|$)#', $gatePath);
+        $isApiArea   = str_starts_with($uri, '/api/') || str_starts_with($uri, '/analytics/');
+        if (!$isAdminArea && !$isApiArea) {
+            try {
+                $analyticsTag = (new \Analytics\Services\AnalyticsService($db))->trackerTag();
+                if ($analyticsTag !== '') {
+                    $output = str_replace('</body>', $analyticsTag . '</body>', $output);
+                }
+            } catch (\Throwable $e) { /* ne jamais casser le rendu public */ }
+        }
+    }
+
+    // ============================================
     // SORTIE FINALE
     // ============================================
     echo $output;
     
-} catch (\Exception $e) {
-    $logger->critical('Unhandled exception', [
-        'message' => $e->getMessage(),
-        'file' => $e->getFile(),
-        'line' => $e->getLine(),
-        'trace' => $e->getTraceAsString()
-    ]);
-    
+} catch (\Throwable $e) {
+    // On ne journalise que l'essentiel.
+    //
+    // Auparavant tout partait en CRITICAL, y compris les 404 : sur 912 entrées,
+    // 756 étaient de simples pages introuvables et 29 des jetons CSRF périmés.
+    // Les quelques vraies pannes étaient noyées dans 98 % de bruit — un journal
+    // qu'on ne peut plus lire ne sert à rien.
+    //
+    // Et le filet était troué dans l'autre sens : `catch (\Exception)` laissait
+    // passer tout ce qui hérite de `\Error` — TypeError, erreur d'argument,
+    // appel à une méthode inexistante. Les pannes les plus graves étaient les
+    // seules à n'être jamais consignées. `\Throwable` les rattrape.
+    if ($e instanceof \Framework\Services\RouteNotFoundException) {
+        // Trafic ordinaire : lien périmé, faute de frappe, robot en maraude.
+        // Rien à consigner. Le Centre de sécurité garde la main sur les
+        // sondages hostiles, qu'il détecte sur des critères autrement plus
+        // sûrs que l'absence de route.
+    } elseif ($e instanceof \Framework\Security\CSRFException) {
+        // Attendu dès qu'une session expire avec un formulaire resté ouvert.
+        // Conservé — une rafale peut signaler une tentative — mais au niveau
+        // qui lui revient.
+        $logger->warning('Jeton CSRF invalide', [
+            'url'    => $_SERVER['REQUEST_URI'] ?? '',
+            'method' => $_SERVER['REQUEST_METHOD'] ?? '',
+        ]);
+    } else {
+        $logger->critical('Unhandled exception', [
+            'message' => $e->getMessage(),
+            'file'    => $e->getFile(),
+            'line'    => $e->getLine(),
+            'trace'   => $e->getTraceAsString()
+        ]);
+    }
+
     throw $e;
 }
