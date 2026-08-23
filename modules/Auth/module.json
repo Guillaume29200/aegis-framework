@@ -1,0 +1,43 @@
+{
+  "name": "Auth",
+  "version": "1.0.0",
+  "description": "Système d'authentification complet avec connexion, inscription, dashboard et gestion des rôles",
+  "author": "Lavelia Studio",
+  "class": "Auth\\Auth",
+  "core": true,
+  "category": "Système",
+  "requires": {
+    "cms_version": ">=4.0.0",
+    "php_version": ">=8.5.0",
+    "modules": []
+  },
+  "permissions": [
+    "auth.login",
+    "auth.register",
+    "auth.manage_users",
+    "auth.view_dashboard",
+    "admin.access"
+  ],
+  "menu": [
+    {
+      "label": "Dashboard",
+      "icon": "🏠",
+      "url": "/admin/dashboard",
+      "position": 0
+    },
+    {
+      "label": "Utilisateurs",
+      "icon": "👥",
+      "url": "/admin/users",
+      "position": 20
+    }
+  ],
+  "settings": {
+    "allow_registration": true,
+    "require_email_verification": false,
+    "remember_me_duration": 604800,
+    "session_lifetime": 7200,
+    "max_login_attempts": 5,
+    "lockout_duration": 900
+  }
+}
