@@ -1,0 +1,10 @@
+# Bloque l'accès direct aux fichiers SQL (schéma + données par défaut) et au
+# fichier de verrou : aucune indexation, aucun listing de la structure de la
+# base de données publiquement. index.php reste accessible (assistant d'install).
+<FilesMatch "\.(sql|lock)$">
+    Require all denied
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>

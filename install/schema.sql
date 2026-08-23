@@ -2,12 +2,42 @@
 
 SET FOREIGN_KEY_CHECKS=0;
 
+CREATE TABLE IF NOT EXISTS `cms_audit_log` (
+  `id` int unsigned NOT NULL AUTO_INCREMENT,
+  `user_id` int unsigned DEFAULT NULL,
+  `username` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `action` varchar(80) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `target_type` varchar(60) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `target_id` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `summary` varchar(500) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `ip` varchar(45) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_created` (`created_at`),
+  KEY `idx_action` (`action`),
+  KEY `idx_user` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `cms_notifications` (
+  `id` int unsigned NOT NULL AUTO_INCREMENT,
+  `user_id` int unsigned NOT NULL,
+  `type` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'info',
+  `icon` varchar(16) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '🔔',
+  `title` varchar(180) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `body` varchar(500) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `url` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `is_read` tinyint(1) NOT NULL DEFAULT '0',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_user_read` (`user_id`,`is_read`),
+  KEY `idx_user_created` (`user_id`,`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS `ai_models` (
   `id` int NOT NULL AUTO_INCREMENT,
-  `provider` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'Provider IA: openai, claude, mistral',
+  `provider` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'Provider IA: openai, claude, mistral, gemini, groq, ollama',
   `model_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'Nom technique du modèle',
   `display_name` varchar(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'Nom affiché dans l''interface',
-  `capabilities` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL COMMENT 'Capacités: {"text":true,"vision":false,"audio":false}',
   `is_active` tinyint(1) DEFAULT '1' COMMENT 'Modèle activé',
   `is_default` tinyint(1) DEFAULT '0' COMMENT 'Modèle par défaut',
   `notes` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT 'Notes/description du modèle',
@@ -55,6 +85,7 @@ CREATE TABLE IF NOT EXISTS `modules` (
   `version` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `active` tinyint(1) NOT NULL DEFAULT '0',
   `priority` int NOT NULL DEFAULT '10',
+  `public_prefix` varchar(60) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
   `installed_at` datetime DEFAULT NULL,
   `updated_at` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
@@ -264,6 +295,38 @@ CREATE TABLE IF NOT EXISTS `users` (
   KEY `idx_email` (`email`),
   KEY `idx_role` (`role`),
   KEY `idx_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Assistant IA global (icône 🧠 du header admin, pré-intégré au core — ne
+-- dépend d'aucun module, fonctionne dès qu'un provider IA est configuré).
+CREATE TABLE IF NOT EXISTS `cms_chat_conversations` (
+  `id` int unsigned NOT NULL AUTO_INCREMENT,
+  `user_id` int unsigned NOT NULL,
+  `title` varchar(200) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'Nouvelle conversation',
+  `provider` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `model_name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `tokens_input_total` int unsigned NOT NULL DEFAULT '0',
+  `tokens_output_total` int unsigned NOT NULL DEFAULT '0',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_chat_conv_user` (`user_id`,`updated_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `cms_chat_messages` (
+  `id` int unsigned NOT NULL AUTO_INCREMENT,
+  `conversation_id` int unsigned NOT NULL,
+  `role` enum('user','assistant') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `content` longtext COLLATE utf8mb4_unicode_ci NOT NULL,
+  `tokens_input` int unsigned NOT NULL DEFAULT '0',
+  `tokens_output` int unsigned NOT NULL DEFAULT '0',
+  `provider` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `model_name` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `error_message` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_chat_msg_conv` (`conversation_id`,`created_at`),
+  CONSTRAINT `fk_chat_msg_conv` FOREIGN KEY (`conversation_id`) REFERENCES `cms_chat_conversations` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 SET FOREIGN_KEY_CHECKS=1;

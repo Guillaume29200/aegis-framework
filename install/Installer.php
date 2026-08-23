@@ -322,6 +322,9 @@ class Installer
                 ['openai_api_key', '', 'string'],
                 ['claude_api_key', '', 'string'],
                 ['mistral_api_key', '', 'string'],
+                ['gemini_api_key', '', 'string'],
+                ['groq_api_key', '', 'string'],
+                ['ollama_base_url', '', 'string'],
                 ['default_ai_provider', 'openai', 'string'],
                 // E-mails (réinitialisation mot de passe)
                 ['password_reset_from_email', 'noreply@' . ($_SERVER['SERVER_NAME'] ?? 'exemple.com'), 'string'],
@@ -407,7 +410,31 @@ class Installer
 
     public function finalize(): array
     {
-        @file_put_contents($this->lockFile(), 'Installé le ' . date('Y-m-d H:i:s') . "\n");
+        $written = @file_put_contents($this->lockFile(), 'Installé le ' . date('Y-m-d H:i:s') . "\n");
+        if ($written === false) {
+            return [
+                'success' => false,
+                'message' => "Impossible d'écrire install/installed.lock (droits d'écriture manquants sur le dossier install/). "
+                    . "TANT QUE CE FICHIER N'EXISTE PAS, L'ASSISTANT D'INSTALLATION RESTE ACCESSIBLE PUBLIQUEMENT. "
+                    . "Corrigez les droits d'écriture puis relancez cette étape.",
+            ];
+        }
+
+        // Défense en profondeur : une fois installé, plus aucune requête HTTP
+        // vers install/ n'a de raison légitime d'aboutir (isInstalled() bloque déjà
+        // toute action mutante côté PHP, ceci verrouille aussi le dossier au niveau
+        // serveur — utile si le lock venait un jour à disparaître). N'affecte pas
+        // cette réponse déjà en cours d'envoi.
+        @file_put_contents(
+            __DIR__ . '/.htaccess',
+            "# Installation terminée — accès HTTP entièrement bloqué (voir installed.lock).\n"
+            . "Require all denied\n"
+            . "<IfModule !mod_authz_core.c>\n"
+            . "Order allow,deny\n"
+            . "Deny from all\n"
+            . "</IfModule>\n"
+        );
+
         return ['success' => true, 'message' => 'Installation finalisée.'];
     }
 }

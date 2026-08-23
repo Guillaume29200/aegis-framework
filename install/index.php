@@ -5,6 +5,24 @@ declare(strict_types=1);
  * Installeur Aegis Framework V4 — assistant multi-étapes.
  * Autonome (ne charge pas le CMS). Accès : /install/
  */
+
+// Durcissement cookie de session — même logique que Framework\Security\SessionManager
+// (non réutilisé ici : l'installeur reste volontairement autonome, sans bootstrap CMS).
+// Utile car la session porte temporairement le mot de passe MySQL en clair
+// (étape 3 → tâche « database ») avant l'écriture du .env.
+@ini_set('session.use_strict_mode', '1');
+@ini_set('session.use_only_cookies', '1');
+@ini_set('session.use_trans_sid', '0');
+@ini_set('session.cookie_httponly', '1');
+session_set_cookie_params([
+    'lifetime' => 0, // expire à la fermeture du navigateur
+    'path'     => '/',
+    'domain'   => '',
+    'secure'   => (getenv('APP_ENV') !== 'local' && isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'),
+    'httponly' => true,
+    'samesite' => 'Strict',
+]);
+session_name('AEGIS_INSTALL_SESSION');
 session_start();
 require __DIR__ . '/Installer.php';
 require __DIR__ . '/InstallController.php';
@@ -312,6 +330,7 @@ $h = fn($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
                     function next() {
                         if (i >= tasks.length) {
                             flash.innerHTML = '<div class="ins-check"><span class="ic">🎉</span><span class="lb">Installation terminée !</span></div>' +
+                                '<p class="ins-help" style="margin-top:10px">🔒 Par sécurité, l\'accès à ce dossier <code>install/</code> vient d\'être automatiquement verrouillé (HTTP 403).</p>' +
                                 '<a class="ui-btn primary u-mt" href="../admin/dashboard">Accéder à l\'administration →</a>';
                             return;
                         }
